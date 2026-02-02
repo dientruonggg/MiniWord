@@ -44,6 +44,8 @@ Thumbs.db
 # Giữ lại thư mục 'logs/' nhưng không commit các file log bên trong
 logs/*
 !logs/.gitkeep
+src/logs/*
+!src/logs/.gitkeep
 
 # 2. User Configuration:
 # Nếu sau này có file config chứa mật khẩu hoặc đường dẫn riêng máy bạn

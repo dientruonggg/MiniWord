@@ -54,16 +54,17 @@ public static class LoggerService
     /// </summary>
     private static void InitializeDefault()
     {
-        var logDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "..", "logs");
-        var fullLogDir = Path.GetFullPath(logDir);
+        // Use the current directory or a relative logs folder
+        // This works better across different execution contexts
+        var logDir = Path.Combine(Directory.GetCurrentDirectory(), "logs");
 
         // Ensure the logs directory exists
-        if (!Directory.Exists(fullLogDir))
+        if (!Directory.Exists(logDir))
         {
-            Directory.CreateDirectory(fullLogDir);
+            Directory.CreateDirectory(logDir);
         }
 
-        var logFilePath = Path.Combine(fullLogDir, "miniword-runtime.txt");
+        var logFilePath = Path.Combine(logDir, "miniword-runtime.txt");
 
         _logger = new LoggerConfiguration()
             .MinimumLevel.Information()
@@ -138,7 +139,8 @@ public static class LoggerService
     {
         if (_logger != null)
         {
-            Log.CloseAndFlush();
+            // Dispose the logger instance to properly flush
+            (_logger as IDisposable)?.Dispose();
         }
     }
 }
