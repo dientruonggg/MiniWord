@@ -1,0 +1,71 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:controls="clr-namespace:MiniWord.UI.Controls"
+        xmlns:vm="clr-namespace:MiniWord.UI.ViewModels"
+        mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="700"
+        x:Class="MiniWord.UI.Views.MainWindow"
+        Title="MiniWord - Document Editor"
+        Width="1000" Height="700"
+        Background="#F5F5F5">
+
+    <Window.Resources>
+        <!-- Blue Theme Colors -->
+        <SolidColorBrush x:Key="PrimaryBlueBrush" Color="#2196F3"/>
+        <SolidColorBrush x:Key="DarkBlueBrush" Color="#1976D2"/>
+        <SolidColorBrush x:Key="LightBlueBrush" Color="#BBDEFB"/>
+        <SolidColorBrush x:Key="AccentBlueBrush" Color="#0D47A1"/>
+    </Window.Resources>
+
+    <DockPanel LastChildFill="True">
+        
+        <!-- Toolbar -->
+        <Border DockPanel.Dock="Top" Background="{StaticResource PrimaryBlueBrush}" 
+                Padding="10" BorderThickness="0,0,0,2" BorderBrush="{StaticResource DarkBlueBrush}">
+            <StackPanel Orientation="Horizontal" Spacing="15">
+                
+                <TextBlock Text="MiniWord" FontSize="18" FontWeight="Bold" 
+                          Foreground="White" VerticalAlignment="Center" Margin="0,0,30,0"/>
+                
+                <!-- Margin Controls -->
+                <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                    <TextBlock Text="Left Margin (mm):" Foreground="White" VerticalAlignment="Center"/>
+                    <NumericUpDown x:Name="LeftMarginInput" 
+                                   Value="25.4" Minimum="0" Maximum="100" 
+                                   Increment="1" FormatString="F1"
+                                   Width="80" Background="White"/>
+                </StackPanel>
+
+                <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                    <TextBlock Text="Right Margin (mm):" Foreground="White" VerticalAlignment="Center"/>
+                    <NumericUpDown x:Name="RightMarginInput" 
+                                   Value="25.4" Minimum="0" Maximum="100" 
+                                   Increment="1" FormatString="F1"
+                                   Width="80" Background="White"/>
+                </StackPanel>
+
+                <Button x:Name="ApplyMarginsButton" 
+                        Content="Apply Margins" 
+                        Background="{StaticResource DarkBlueBrush}"
+                        Foreground="White"
+                        Padding="10,5"
+                        Margin="10,0,0,0"/>
+                
+            </StackPanel>
+        </Border>
+
+        <!-- Ruler -->
+        <Border DockPanel.Dock="Top" Background="White">
+            <controls:RulerControl x:Name="RulerControl"/>
+        </Border>
+
+        <!-- Main Content - A4 Canvas -->
+        <Border Background="#E0E0E0" Padding="20">
+            <controls:A4Canvas x:Name="A4Canvas"/>
+        </Border>
+
+    </DockPanel>
+
+</Window>
+
