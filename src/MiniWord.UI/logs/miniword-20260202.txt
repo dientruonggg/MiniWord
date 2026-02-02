@@ -1,0 +1,12 @@
+[2026-02-02 08:48:53.776 +00:00] [INF] Logging configured successfully
+[2026-02-02 08:48:53.810 +00:00] [INF] ============ MiniWord Application Starting ============
+[2026-02-02 08:48:53.916 +00:00] [FTL] Application terminated unexpectedly
+System.Exception: XOpenDisplay failed
+   at Avalonia.X11.AvaloniaX11Platform.Initialize(X11PlatformOptions options)
+   at Avalonia.AvaloniaX11PlatformExtensions.<>c.<UseX11>b__0_0()
+   at Avalonia.AppBuilder.SetupUnsafe()
+   at Avalonia.AppBuilder.Setup()
+   at Avalonia.AppBuilder.SetupWithLifetime(IApplicationLifetime lifetime)
+   at Avalonia.ClassicDesktopStyleApplicationLifetimeExtensions.StartWithClassicDesktopLifetime(AppBuilder builder, String[] args, Action`1 lifetimeBuilder)
+   at MiniWord.UI.Program.Main(String[] args) in /home/runner/work/MiniWord/MiniWord/src/MiniWord.UI/Program.cs:line 21
+[2026-02-02 08:48:53.928 +00:00] [INF] ============ MiniWord Application Stopped ============
