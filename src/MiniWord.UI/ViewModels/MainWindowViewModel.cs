@@ -11,6 +11,7 @@ namespace MiniWord.UI.ViewModels;
 
 /// <summary>
 /// ViewModel for MainWindow - MVVM pattern with CommunityToolkit.Mvvm
+/// Uses INotifyPropertyChanged for data binding with two-way margin controls
 /// </summary>
 public partial class MainWindowViewModel : ObservableObject
 {
@@ -32,11 +33,6 @@ public partial class MainWindowViewModel : ObservableObject
     [ObservableProperty]
     private int _currentPage;
 
-    /// <summary>
-    /// Event that UI layer can subscribe to for applying margins to controls
-    /// </summary>
-    public event EventHandler<DocumentMargins>? MarginsApplied;
-
     public MainWindowViewModel()
     {
         _logger = Log.ForContext<MainWindowViewModel>();
@@ -52,6 +48,7 @@ public partial class MainWindowViewModel : ObservableObject
 
     /// <summary>
     /// Left margin in millimeters (for UI binding)
+    /// Two-way binding with NumericUpDown control
     /// </summary>
     public double LeftMarginMm
     {
@@ -68,6 +65,7 @@ public partial class MainWindowViewModel : ObservableObject
 
     /// <summary>
     /// Right margin in millimeters (for UI binding)
+    /// Two-way binding with NumericUpDown control
     /// </summary>
     public double RightMarginMm
     {
@@ -83,7 +81,8 @@ public partial class MainWindowViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Command to apply margins - replaces button click event handler
+    /// Command to apply margins - triggers UI update via property change notification
+    /// Replaces button click event handler from code-behind
     /// </summary>
     [RelayCommand]
     private void ApplyMargins()
@@ -92,14 +91,15 @@ public partial class MainWindowViewModel : ObservableObject
         
         try
         {
-            // Raise event for UI layer to update controls
-            MarginsApplied?.Invoke(this, Margins);
+            // Trigger property change notification to update UI
+            // The View will receive this notification and update the controls
+            OnPropertyChanged(nameof(Margins));
             
-            _logger.Information("Margins applied successfully via command");
+            _logger.Information("Margins property change notification sent successfully");
         }
         catch (Exception ex)
         {
-            _logger.Error(ex, "Failed to apply margins via command");
+            _logger.Error(ex, "Failed to send margins property change notification");
         }
     }
 
@@ -144,5 +144,8 @@ public partial class MainWindowViewModel : ObservableObject
     partial void OnMarginsChanged(DocumentMargins value)
     {
         _logger.Information("Margins changed in ViewModel: {Margins}", value);
+        // Also notify the mm properties that they may have changed
+        OnPropertyChanged(nameof(LeftMarginMm));
+        OnPropertyChanged(nameof(RightMarginMm));
     }
 }

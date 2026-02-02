@@ -32,16 +32,16 @@
                 <!-- Margin Controls -->
                 <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
                     <TextBlock Text="Left Margin (mm):" Foreground="White" VerticalAlignment="Center"/>
-                    <NumericUpDown x:Name="LeftMarginInput" 
-                                   Value="25.4" Minimum="0" Maximum="100" 
+                    <NumericUpDown Value="{Binding LeftMarginMm}" 
+                                   Minimum="0" Maximum="100" 
                                    Increment="1" FormatString="F1"
                                    Width="80" Background="White"/>
                 </StackPanel>
 
                 <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
                     <TextBlock Text="Right Margin (mm):" Foreground="White" VerticalAlignment="Center"/>
-                    <NumericUpDown x:Name="RightMarginInput" 
-                                   Value="25.4" Minimum="0" Maximum="100" 
+                    <NumericUpDown Value="{Binding RightMarginMm}" 
+                                   Minimum="0" Maximum="100" 
                                    Increment="1" FormatString="F1"
                                    Width="80" Background="White"/>
                 </StackPanel>
