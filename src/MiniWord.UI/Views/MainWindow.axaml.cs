@@ -113,13 +113,57 @@ public partial class MainWindow : Window
     /// </summary>
     private void MainWindow_KeyDown(object? sender, Avalonia.Input.KeyEventArgs e)
     {
-        _logger.Debug("Key pressed: {Key}", e.Key);
+        _logger.Debug("Key pressed: {Key}, Modifiers: {Modifiers}", e.Key, e.KeyModifiers);
 
-        // Example: Ctrl+S for save (like WinForms)
+        var canvas = this.FindControl<Controls.A4Canvas>("A4Canvas");
+        if (canvas == null)
+        {
+            _logger.Warning("A4Canvas not found for keyboard handling");
+            return;
+        }
+
+        // Ctrl+S for save (like WinForms)
         if (e.KeyModifiers == Avalonia.Input.KeyModifiers.Control && e.Key == Avalonia.Input.Key.S)
         {
             _logger.Information("Ctrl+S pressed - Save action (not implemented yet)");
             e.Handled = true;
+            return;
+        }
+
+        // Ctrl+Home - Scroll to top of document
+        if (e.KeyModifiers == Avalonia.Input.KeyModifiers.Control && e.Key == Avalonia.Input.Key.Home)
+        {
+            _logger.Information("Ctrl+Home pressed - Scrolling to top");
+            canvas.ScrollToTop();
+            e.Handled = true;
+            return;
+        }
+
+        // Ctrl+End - Scroll to bottom of document
+        if (e.KeyModifiers == Avalonia.Input.KeyModifiers.Control && e.Key == Avalonia.Input.Key.End)
+        {
+            _logger.Information("Ctrl+End pressed - Scrolling to bottom");
+            canvas.ScrollToBottom();
+            e.Handled = true;
+            return;
+        }
+
+        // Page Up - Scroll up one page
+        if (e.Key == Avalonia.Input.Key.PageUp)
+        {
+            _logger.Information("Page Up pressed - Scrolling up");
+            canvas.ScrollPageUp();
+            e.Handled = true;
+            return;
+        }
+
+        // Page Down - Scroll down one page
+        if (e.Key == Avalonia.Input.Key.PageDown)
+        {
+            _logger.Information("Page Down pressed - Scrolling down");
+            canvas.ScrollPageDown();
+            e.Handled = true;
+            return;
         }
 
         // Other key handling can be added here

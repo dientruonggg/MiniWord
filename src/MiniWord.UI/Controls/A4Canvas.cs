@@ -9,6 +9,7 @@ using MiniWord.UI.Services;
 using Serilog;
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace MiniWord.UI.Controls;
 
@@ -27,10 +28,14 @@ public partial class A4Canvas : UserControl
     private readonly List<Line> _marginLines = new();
     private TextRenderer? _textRenderer;
     private TextFlowEngine? _textFlowEngine;
+    private A4Document? _document;
     
     // A4 dimensions at 96 DPI
     private const double A4_WIDTH = 794;
     private const double A4_HEIGHT = 1123;
+    
+    // Page spacing for multi-page view
+    private const double PAGE_SPACING = 20;
     
     // Current margins (default: 1 inch = 96px)
     private double _leftMargin = 96;
@@ -142,6 +147,9 @@ public partial class A4Canvas : UserControl
         Content = _scrollViewer;
 
         _logger.Information("A4Canvas initialized with dimensions {Width}x{Height}px", A4_WIDTH, A4_HEIGHT);
+        
+        // Subscribe to scroll events for viewport optimization
+        _scrollViewer.ScrollChanged += OnScrollChanged;
     }
 
     /// <summary>
@@ -471,6 +479,178 @@ public partial class A4Canvas : UserControl
     public TextFlowEngine? GetTextFlowEngine()
     {
         return _textFlowEngine;
+    }
+
+    #endregion
+
+    #region Scrolling and Viewport Management (P2.4)
+
+    /// <summary>
+    /// Sets the document for this canvas
+    /// </summary>
+    public void SetDocument(A4Document? document)
+    {
+        _document = document;
+        if (_document != null)
+        {
+            _logger.Information("Document set with {PageCount} pages", _document.PageCount);
+            UpdateCanvasForMultiplePages();
+        }
+    }
+
+    /// <summary>
+    /// Gets the current document
+    /// </summary>
+    public A4Document? GetDocument()
+    {
+        return _document;
+    }
+
+    /// <summary>
+    /// Updates canvas size to accommodate multiple pages
+    /// </summary>
+    private void UpdateCanvasForMultiplePages()
+    {
+        if (_document == null) return;
+
+        // Calculate total height for all pages with spacing
+        var totalHeight = (_document.PageCount * A4_HEIGHT) + 
+                         ((_document.PageCount - 1) * PAGE_SPACING) + 
+                         100; // Padding
+
+        _paperCanvas.Height = totalHeight;
+        _logger.Debug("Canvas height updated for {PageCount} pages: {Height}px", 
+            _document.PageCount, totalHeight);
+    }
+
+    /// <summary>
+    /// Handles scroll events for viewport optimization
+    /// </summary>
+    private void OnScrollChanged(object? sender, ScrollChangedEventArgs e)
+    {
+        // Log scroll position for debugging
+        _logger.Debug("Scroll changed - Offset: {Offset}, Extent: {Extent}, Viewport: {Viewport}",
+            e.OffsetDelta, e.ExtentDelta, e.ViewportDelta);
+
+        // Future optimization: Only render pages visible in viewport
+        // This is a placeholder for virtual rendering implementation
+    }
+
+    /// <summary>
+    /// Scrolls to a specific page
+    /// </summary>
+    /// <param name="pageIndex">Zero-based page index</param>
+    public void ScrollToPage(int pageIndex)
+    {
+        if (_document == null || pageIndex < 0 || pageIndex >= _document.PageCount)
+        {
+            _logger.Warning("Invalid page index for scrolling: {PageIndex}", pageIndex);
+            return;
+        }
+
+        // Calculate vertical offset for the page
+        var offset = 50 + (pageIndex * (A4_HEIGHT + PAGE_SPACING));
+        
+        _logger.Information("Scrolling to page {PageNumber} at offset {Offset}px", 
+            pageIndex + 1, offset);
+
+        _scrollViewer.Offset = new Vector(_scrollViewer.Offset.X, offset);
+    }
+
+    /// <summary>
+    /// Scrolls to the top of the document (first page)
+    /// </summary>
+    public void ScrollToTop()
+    {
+        _logger.Information("Scrolling to top of document");
+        _scrollViewer.Offset = new Vector(0, 0);
+    }
+
+    /// <summary>
+    /// Scrolls to the bottom of the document (last page)
+    /// </summary>
+    public void ScrollToBottom()
+    {
+        _logger.Information("Scrolling to bottom of document");
+        var maxOffset = _scrollViewer.Extent.Height - _scrollViewer.Viewport.Height;
+        _scrollViewer.Offset = new Vector(0, maxOffset);
+    }
+
+    /// <summary>
+    /// Scrolls up by one page (viewport height)
+    /// </summary>
+    public void ScrollPageUp()
+    {
+        var newOffset = Math.Max(0, _scrollViewer.Offset.Y - _scrollViewer.Viewport.Height);
+        _logger.Debug("Scrolling page up from {Current} to {New}", 
+            _scrollViewer.Offset.Y, newOffset);
+        _scrollViewer.Offset = new Vector(_scrollViewer.Offset.X, newOffset);
+    }
+
+    /// <summary>
+    /// Scrolls down by one page (viewport height)
+    /// </summary>
+    public void ScrollPageDown()
+    {
+        var maxOffset = _scrollViewer.Extent.Height - _scrollViewer.Viewport.Height;
+        var newOffset = Math.Min(maxOffset, _scrollViewer.Offset.Y + _scrollViewer.Viewport.Height);
+        _logger.Debug("Scrolling page down from {Current} to {New}", 
+            _scrollViewer.Offset.Y, newOffset);
+        _scrollViewer.Offset = new Vector(_scrollViewer.Offset.X, newOffset);
+    }
+
+    /// <summary>
+    /// Scrolls smoothly to a specific vertical offset
+    /// </summary>
+    /// <param name="targetOffset">Target vertical offset in pixels</param>
+    public async void ScrollToOffsetSmooth(double targetOffset)
+    {
+        const int steps = 20;
+        const int delayMs = 10;
+        
+        var currentOffset = _scrollViewer.Offset.Y;
+        var delta = (targetOffset - currentOffset) / steps;
+
+        _logger.Debug("Smooth scrolling from {Current} to {Target}", currentOffset, targetOffset);
+
+        for (int i = 0; i < steps; i++)
+        {
+            currentOffset += delta;
+            _scrollViewer.Offset = new Vector(_scrollViewer.Offset.X, currentOffset);
+            await Task.Delay(delayMs);
+        }
+
+        // Ensure we end exactly at the target
+        _scrollViewer.Offset = new Vector(_scrollViewer.Offset.X, targetOffset);
+    }
+
+    /// <summary>
+    /// Gets the current scroll offset
+    /// </summary>
+    public Vector GetScrollOffset()
+    {
+        return _scrollViewer.Offset;
+    }
+
+    /// <summary>
+    /// Gets the viewport size
+    /// </summary>
+    public Size GetViewportSize()
+    {
+        return _scrollViewer.Viewport;
+    }
+
+    /// <summary>
+    /// Gets the currently visible page index based on scroll position
+    /// </summary>
+    public int GetVisiblePageIndex()
+    {
+        if (_document == null || _document.PageCount == 0) return 0;
+
+        var scrollOffset = _scrollViewer.Offset.Y;
+        var pageIndex = (int)((scrollOffset - 50) / (A4_HEIGHT + PAGE_SPACING));
+        
+        return Math.Max(0, Math.Min(pageIndex, _document.PageCount - 1));
     }
 
     #endregion
