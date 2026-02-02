@@ -6,6 +6,7 @@
         xmlns:vm="clr-namespace:MiniWord.UI.ViewModels"
         mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="700"
         x:Class="MiniWord.UI.Views.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
         Title="MiniWord - Document Editor"
         Width="1000" Height="700"
         Background="#F5F5F5">
@@ -45,12 +46,12 @@
                                    Width="80" Background="White"/>
                 </StackPanel>
 
-                <Button x:Name="ApplyMarginsButton" 
-                        Content="Apply Margins" 
+                <Button Content="Apply Margins" 
                         Background="{StaticResource DarkBlueBrush}"
                         Foreground="White"
                         Padding="10,5"
-                        Margin="10,0,0,0"/>
+                        Margin="10,0,0,0"
+                        Command="{Binding ApplyMarginsCommand}"/>
                 
             </StackPanel>
         </Border>
