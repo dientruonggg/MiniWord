@@ -22,6 +22,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\MiniWord.Core\MiniWord.Core.csproj" />
+    <ProjectReference Include="..\..\src\MiniWord.UI\MiniWord.UI.csproj" />
   </ItemGroup>
 
 </Project>

@@ -1,5 +1,8 @@
 using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.ComponentModel;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -12,8 +15,9 @@ namespace MiniWord.UI.ViewModels;
 /// <summary>
 /// ViewModel for MainWindow - MVVM pattern with CommunityToolkit.Mvvm
 /// Uses INotifyPropertyChanged for data binding with two-way margin controls
+/// Implements INotifyDataErrorInfo for input validation (P3.3)
 /// </summary>
-public partial class MainWindowViewModel : ObservableObject
+public partial class MainWindowViewModel : ObservableObject, INotifyDataErrorInfo
 {
     private readonly ILogger _logger;
     private readonly MarginCalculator _marginCalculator;
@@ -33,6 +37,15 @@ public partial class MainWindowViewModel : ObservableObject
     [ObservableProperty]
     private int _currentPage;
 
+    // Validation constants for margins (in millimeters)
+    private const double MIN_MARGIN_MM = 0.0;
+    private const double MAX_MARGIN_MM = 100.0;
+    private const double A4_WIDTH_MM = 210.0;
+    private const double A4_HEIGHT_MM = 297.0;
+
+    // Error storage for INotifyDataErrorInfo
+    private readonly Dictionary<string, List<string>> _errors = new();
+
     public MainWindowViewModel()
     {
         _logger = Log.ForContext<MainWindowViewModel>();
@@ -43,40 +56,183 @@ public partial class MainWindowViewModel : ObservableObject
         _wordCount = 0;
         _currentPage = 1;
 
-        _logger.Information("MainWindowViewModel initialized with MVVM pattern");
+        _logger.Information("MainWindowViewModel initialized with MVVM pattern and validation support");
     }
+
+    #region INotifyDataErrorInfo Implementation
+
+    /// <summary>
+    /// Event raised when validation errors change
+    /// </summary>
+    public event EventHandler<DataErrorsChangedEventArgs>? ErrorsChanged;
+
+    /// <summary>
+    /// Gets whether the ViewModel has any validation errors
+    /// </summary>
+    public bool HasErrors => _errors.Count > 0;
+
+    /// <summary>
+    /// Gets validation errors for a specific property
+    /// </summary>
+    public IEnumerable GetErrors(string? propertyName)
+    {
+        if (string.IsNullOrEmpty(propertyName))
+            return _errors.Values.SelectMany(e => e);
+
+        return _errors.ContainsKey(propertyName) ? _errors[propertyName] : Enumerable.Empty<string>();
+    }
+
+    /// <summary>
+    /// Adds a validation error for a property
+    /// </summary>
+    private void AddError(string propertyName, string error)
+    {
+        if (!_errors.ContainsKey(propertyName))
+            _errors[propertyName] = new List<string>();
+
+        if (!_errors[propertyName].Contains(error))
+        {
+            _errors[propertyName].Add(error);
+            OnErrorsChanged(propertyName);
+            _logger.Debug("Validation error added for {Property}: {Error}", propertyName, error);
+        }
+    }
+
+    /// <summary>
+    /// Clears validation errors for a property
+    /// </summary>
+    private void ClearErrors(string propertyName)
+    {
+        if (_errors.ContainsKey(propertyName))
+        {
+            _errors.Remove(propertyName);
+            OnErrorsChanged(propertyName);
+            _logger.Debug("Validation errors cleared for {Property}", propertyName);
+        }
+    }
+
+    /// <summary>
+    /// Raises the ErrorsChanged event
+    /// </summary>
+    private void OnErrorsChanged(string propertyName)
+    {
+        ErrorsChanged?.Invoke(this, new DataErrorsChangedEventArgs(propertyName));
+        OnPropertyChanged(nameof(HasErrors));
+    }
+
+    /// <summary>
+    /// Validates a margin value
+    /// </summary>
+    private bool ValidateMarginValue(string propertyName, double value, string marginName)
+    {
+        ClearErrors(propertyName);
+
+        // Check minimum value
+        if (value < MIN_MARGIN_MM)
+        {
+            AddError(propertyName, $"{marginName} margin cannot be less than {MIN_MARGIN_MM}mm");
+            return false;
+        }
+
+        // Check maximum value
+        if (value > MAX_MARGIN_MM)
+        {
+            AddError(propertyName, $"{marginName} margin cannot exceed {MAX_MARGIN_MM}mm");
+            return false;
+        }
+
+        // Check if margins would exceed paper dimensions
+        if (propertyName == nameof(LeftMarginMm))
+        {
+            var totalHorizontal = value + RightMarginMm;
+            if (totalHorizontal >= A4_WIDTH_MM)
+            {
+                AddError(propertyName, $"Left and right margins combined ({totalHorizontal:F1}mm) must be less than paper width ({A4_WIDTH_MM}mm)");
+                return false;
+            }
+        }
+        else if (propertyName == nameof(RightMarginMm))
+        {
+            var totalHorizontal = LeftMarginMm + value;
+            if (totalHorizontal >= A4_WIDTH_MM)
+            {
+                AddError(propertyName, $"Left and right margins combined ({totalHorizontal:F1}mm) must be less than paper width ({A4_WIDTH_MM}mm)");
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    #endregion
 
     /// <summary>
     /// Left margin in millimeters (for UI binding)
     /// Two-way binding with NumericUpDown control
+    /// Includes validation via INotifyDataErrorInfo (P3.3)
     /// </summary>
     public double LeftMarginMm
     {
         get => _marginCalculator.PixelsToMillimeters(Margins.Left);
         set
         {
-            var pixels = _marginCalculator.MillimetersToPixels(value);
-            var newMargins = new DocumentMargins(pixels, Margins.Right, Margins.Top, Margins.Bottom);
-            Margins = newMargins;
-            OnPropertyChanged();
-            _logger.Debug("Left margin changed to {Value}mm ({Pixels}px)", value, pixels);
+            // Validate the new value
+            if (!ValidateMarginValue(nameof(LeftMarginMm), value, "Left"))
+            {
+                _logger.Warning("Invalid left margin value: {Value}mm", value);
+                OnPropertyChanged(); // Notify UI to show error
+                return;
+            }
+
+            try
+            {
+                var pixels = _marginCalculator.MillimetersToPixels(value);
+                var newMargins = new DocumentMargins(pixels, Margins.Right, Margins.Top, Margins.Bottom);
+                Margins = newMargins;
+                OnPropertyChanged();
+                _logger.Debug("Left margin changed to {Value}mm ({Pixels}px)", value, pixels);
+            }
+            catch (Exception ex)
+            {
+                AddError(nameof(LeftMarginMm), $"Failed to set left margin: {ex.Message}");
+                _logger.Error(ex, "Failed to set left margin to {Value}mm", value);
+                OnPropertyChanged();
+            }
         }
     }
 
     /// <summary>
     /// Right margin in millimeters (for UI binding)
     /// Two-way binding with NumericUpDown control
+    /// Includes validation via INotifyDataErrorInfo (P3.3)
     /// </summary>
     public double RightMarginMm
     {
         get => _marginCalculator.PixelsToMillimeters(Margins.Right);
         set
         {
-            var pixels = _marginCalculator.MillimetersToPixels(value);
-            var newMargins = new DocumentMargins(Margins.Left, pixels, Margins.Top, Margins.Bottom);
-            Margins = newMargins;
-            OnPropertyChanged();
-            _logger.Debug("Right margin changed to {Value}mm ({Pixels}px)", value, pixels);
+            // Validate the new value
+            if (!ValidateMarginValue(nameof(RightMarginMm), value, "Right"))
+            {
+                _logger.Warning("Invalid right margin value: {Value}mm", value);
+                OnPropertyChanged(); // Notify UI to show error
+                return;
+            }
+
+            try
+            {
+                var pixels = _marginCalculator.MillimetersToPixels(value);
+                var newMargins = new DocumentMargins(Margins.Left, pixels, Margins.Top, Margins.Bottom);
+                Margins = newMargins;
+                OnPropertyChanged();
+                _logger.Debug("Right margin changed to {Value}mm ({Pixels}px)", value, pixels);
+            }
+            catch (Exception ex)
+            {
+                AddError(nameof(RightMarginMm), $"Failed to set right margin: {ex.Message}");
+                _logger.Error(ex, "Failed to set right margin to {Value}mm", value);
+                OnPropertyChanged();
+            }
         }
     }
 

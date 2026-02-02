@@ -32,18 +32,32 @@
                 <!-- Margin Controls -->
                 <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
                     <TextBlock Text="Left Margin (mm):" Foreground="White" VerticalAlignment="Center"/>
-                    <NumericUpDown Value="{Binding LeftMarginMm}" 
+                    <NumericUpDown Value="{Binding LeftMarginMm, Mode=TwoWay}" 
                                    Minimum="0" Maximum="100" 
                                    Increment="1" FormatString="F1"
                                    Width="80" Background="White"/>
+                    <TextBlock x:Name="LeftMarginError" 
+                              Foreground="Yellow" 
+                              VerticalAlignment="Center"
+                              FontWeight="Bold"
+                              FontSize="12"
+                              IsVisible="False"
+                              Margin="5,0,0,0"/>
                 </StackPanel>
 
                 <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
                     <TextBlock Text="Right Margin (mm):" Foreground="White" VerticalAlignment="Center"/>
-                    <NumericUpDown Value="{Binding RightMarginMm}" 
+                    <NumericUpDown Value="{Binding RightMarginMm, Mode=TwoWay}" 
                                    Minimum="0" Maximum="100" 
                                    Increment="1" FormatString="F1"
                                    Width="80" Background="White"/>
+                    <TextBlock x:Name="RightMarginError"
+                              Foreground="Yellow"
+                              VerticalAlignment="Center"
+                              FontWeight="Bold"
+                              FontSize="12"
+                              IsVisible="False"
+                              Margin="5,0,0,0"/>
                 </StackPanel>
 
                 <Button Content="Apply Margins" 

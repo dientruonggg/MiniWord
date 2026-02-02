@@ -4,6 +4,7 @@ using MiniWord.UI.ViewModels;
 using Serilog;
 using System;
 using System.ComponentModel;
+using System.Linq;
 
 namespace MiniWord.UI.Views;
 
@@ -29,10 +30,54 @@ public partial class MainWindow : Window
         // Subscribe to ViewModel property changes for margin updates
         _viewModel.PropertyChanged += OnViewModelPropertyChanged;
 
+        // Subscribe to validation errors (P3.3)
+        _viewModel.ErrorsChanged += OnViewModelErrorsChanged;
+
         // Wire up keyboard event handlers (view-specific behavior)
         this.KeyDown += MainWindow_KeyDown;
 
-        _logger.Information("MainWindow initialized successfully with MVVM pattern");
+        _logger.Information("MainWindow initialized successfully with MVVM pattern and validation support");
+    }
+
+    /// <summary>
+    /// Handles validation errors from ViewModel - displays error messages in UI (P3.3)
+    /// </summary>
+    private void OnViewModelErrorsChanged(object? sender, DataErrorsChangedEventArgs e)
+    {
+        _logger.Debug("Validation errors changed for property: {PropertyName}", e.PropertyName);
+
+        try
+        {
+            var leftErrorBlock = this.FindControl<TextBlock>("LeftMarginError");
+            var rightErrorBlock = this.FindControl<TextBlock>("RightMarginError");
+
+            if (e.PropertyName == nameof(_viewModel.LeftMarginMm) && leftErrorBlock != null)
+            {
+                var errors = _viewModel.GetErrors(nameof(_viewModel.LeftMarginMm))
+                    .Cast<string>()
+                    .ToList();
+
+                leftErrorBlock.Text = errors.Count > 0 ? $"⚠ {errors.First()}" : string.Empty;
+                leftErrorBlock.IsVisible = errors.Count > 0;
+
+                _logger.Information("Left margin validation errors displayed: {Count} errors", errors.Count);
+            }
+            else if (e.PropertyName == nameof(_viewModel.RightMarginMm) && rightErrorBlock != null)
+            {
+                var errors = _viewModel.GetErrors(nameof(_viewModel.RightMarginMm))
+                    .Cast<string>()
+                    .ToList();
+
+                rightErrorBlock.Text = errors.Count > 0 ? $"⚠ {errors.First()}" : string.Empty;
+                rightErrorBlock.IsVisible = errors.Count > 0;
+
+                _logger.Information("Right margin validation errors displayed: {Count} errors", errors.Count);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(ex, "Failed to display validation errors for property: {PropertyName}", e.PropertyName);
+        }
     }
 
     /// <summary>
