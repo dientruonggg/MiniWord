@@ -42,8 +42,8 @@ public partial class A4Canvas : UserControl
     {
         _logger = Log.ForContext<A4Canvas>();
         
-        // Initialize text rendering pipeline
-        _textRenderer = new TextRenderer(_logger, fontFamily: new FontFamily("Times New Roman"), fontSize: 12);
+        // Initialize text rendering pipeline with fallback font family
+        _textRenderer = new TextRenderer(_logger, fontFamily: new FontFamily("Times New Roman, serif"), fontSize: 12);
         _textFlowEngine = new TextFlowEngine(_logger);
         
         InitializeComponent();

@@ -125,8 +125,8 @@ public class TextRenderer
         var origin = new Point(x, y);
         context.DrawText(formattedText, origin);
 
-        _logger.Debug("Rendered line '{Content}' at position ({X}, {Y})", 
-            textLine.Content.Substring(0, Math.Min(20, textLine.Content.Length)), x, y);
+        _logger.Debug("Rendered line at position ({X}, {Y}), content length: {Length}", 
+            x, y, textLine.Content?.Length ?? 0);
     }
 
     /// <summary>
