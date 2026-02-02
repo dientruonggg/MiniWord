@@ -1,13 +1,16 @@
 using Avalonia;
+using Avalonia.Collections;
 using Avalonia.Controls;
+using Avalonia.Controls.Shapes;
 using Avalonia.Media;
 using MiniWord.Core.Models;
 using Serilog;
+using System.Collections.Generic;
 
 namespace MiniWord.UI.Controls;
 
 /// <summary>
-/// Custom control representing an A4 paper canvas
+/// Custom control representing an A4 paper canvas with margin visualization
 /// </summary>
 public partial class A4Canvas : UserControl
 {
@@ -15,11 +18,19 @@ public partial class A4Canvas : UserControl
     private Canvas _paperCanvas = null!;
     private Border _paperBorder = null!;
     private ScrollViewer _scrollViewer = null!;
-    private TextBox _editorTextBox = null!;
+    private RichTextEditor _editorTextBox = null!;
+    private Canvas _marginCanvas = null!;
+    private readonly List<Line> _marginLines = new();
     
     // A4 dimensions at 96 DPI
     private const double A4_WIDTH = 794;
     private const double A4_HEIGHT = 1123;
+    
+    // Current margins (default: 1 inch = 96px)
+    private double _leftMargin = 96;
+    private double _topMargin = 96;
+    private double _rightMargin = 96;
+    private double _bottomMargin = 96;
     
     public A4Canvas()
     {
@@ -68,33 +79,42 @@ public partial class A4Canvas : UserControl
         Canvas.SetLeft(_paperBorder, 50);
         Canvas.SetTop(_paperBorder, 50);
 
-        // Create the text editor with default margins (1 inch = 96px)
-        _editorTextBox = new TextBox
+        // Create the rich text editor with default margins (1 inch = 96px)
+        _editorTextBox = new RichTextEditor
         {
             Width = A4_WIDTH - 192, // 96px left + 96px right margin
             Height = A4_HEIGHT - 192, // 96px top + 96px bottom margin
-            AcceptsReturn = true,
-            TextWrapping = TextWrapping.Wrap,
-            BorderThickness = new Thickness(0),
-            Background = Brushes.Transparent,
-            Padding = new Thickness(0),
-            VerticalAlignment = Avalonia.Layout.VerticalAlignment.Top,
-            FontFamily = new FontFamily("Times New Roman"),
-            FontSize = 12
         };
 
-        // Create a container for the text box to handle margins
+        // Subscribe to cursor position changes for visual feedback
+        _editorTextBox.CursorPositionChanged += OnCursorPositionChanged;
+
+        // Create a container for the text box and margin visualization
         var textBoxContainer = new Canvas
         {
             Width = A4_WIDTH,
             Height = A4_HEIGHT
         };
 
+        // Create canvas for margin lines (drawn behind text)
+        _marginCanvas = new Canvas
+        {
+            Width = A4_WIDTH,
+            Height = A4_HEIGHT
+        };
+
+        // Add margin lines to the container
+        textBoxContainer.Children.Add(_marginCanvas);
+        
         // Position text box with margins
         Canvas.SetLeft(_editorTextBox, 96); // Left margin
         Canvas.SetTop(_editorTextBox, 96);  // Top margin
 
         textBoxContainer.Children.Add(_editorTextBox);
+        
+        // Draw initial margin indicators
+        DrawMarginIndicators();
+        
         _paperBorder.Child = textBoxContainer;
 
         _paperCanvas.Children.Add(_paperBorder);
@@ -114,6 +134,12 @@ public partial class A4Canvas : UserControl
 
         if (_editorTextBox == null) return;
 
+        // Store current margins
+        _leftMargin = margins.Left;
+        _topMargin = margins.Top;
+        _rightMargin = margins.Right;
+        _bottomMargin = margins.Bottom;
+
         // Update text box size based on new margins
         _editorTextBox.Width = A4_WIDTH - margins.TotalHorizontal;
         _editorTextBox.Height = A4_HEIGHT - margins.TotalVertical;
@@ -122,8 +148,139 @@ public partial class A4Canvas : UserControl
         Canvas.SetLeft(_editorTextBox, margins.Left);
         Canvas.SetTop(_editorTextBox, margins.Top);
 
+        // Redraw margin indicators
+        DrawMarginIndicators();
+
         _logger.Debug("Text box dimensions updated: {Width}x{Height}px at position ({Left}, {Top})",
             _editorTextBox.Width, _editorTextBox.Height, margins.Left, margins.Top);
+    }
+
+    /// <summary>
+    /// Draws visual indicators for document margins
+    /// </summary>
+    private void DrawMarginIndicators()
+    {
+        // Clear existing margin lines
+        _marginLines.Clear();
+        _marginCanvas.Children.Clear();
+
+        var marginBrush = new SolidColorBrush(Color.FromRgb(180, 180, 180)); // Light gray
+        var dashedPen = new Pen(marginBrush, 1)
+        {
+            DashStyle = new DashStyle(new double[] { 4, 4 }, 0)
+        };
+
+        // Left margin line
+        var leftLine = new Line
+        {
+            StartPoint = new Point(_leftMargin, 0),
+            EndPoint = new Point(_leftMargin, A4_HEIGHT),
+            Stroke = marginBrush,
+            StrokeThickness = 1,
+            StrokeDashArray = new AvaloniaList<double>(4, 4)
+        };
+        _marginLines.Add(leftLine);
+        _marginCanvas.Children.Add(leftLine);
+
+        // Right margin line
+        var rightLine = new Line
+        {
+            StartPoint = new Point(A4_WIDTH - _rightMargin, 0),
+            EndPoint = new Point(A4_WIDTH - _rightMargin, A4_HEIGHT),
+            Stroke = marginBrush,
+            StrokeThickness = 1,
+            StrokeDashArray = new AvaloniaList<double>(4, 4)
+        };
+        _marginLines.Add(rightLine);
+        _marginCanvas.Children.Add(rightLine);
+
+        // Top margin line
+        var topLine = new Line
+        {
+            StartPoint = new Point(0, _topMargin),
+            EndPoint = new Point(A4_WIDTH, _topMargin),
+            Stroke = marginBrush,
+            StrokeThickness = 1,
+            StrokeDashArray = new AvaloniaList<double>(4, 4)
+        };
+        _marginLines.Add(topLine);
+        _marginCanvas.Children.Add(topLine);
+
+        // Bottom margin line
+        var bottomLine = new Line
+        {
+            StartPoint = new Point(0, A4_HEIGHT - _bottomMargin),
+            EndPoint = new Point(A4_WIDTH, A4_HEIGHT - _bottomMargin),
+            Stroke = marginBrush,
+            StrokeThickness = 1,
+            StrokeDashArray = new AvaloniaList<double>(4, 4)
+        };
+        _marginLines.Add(bottomLine);
+        _marginCanvas.Children.Add(bottomLine);
+
+        _logger.Debug("Margin indicators drawn at: L={Left}, R={Right}, T={Top}, B={Bottom}",
+            _leftMargin, _rightMargin, _topMargin, _bottomMargin);
+    }
+
+    /// <summary>
+    /// Handles cursor position changes to provide visual feedback
+    /// </summary>
+    private void OnCursorPositionChanged(object? sender, CursorPositionChangedEventArgs e)
+    {
+        // Implement visual feedback when text approaches margins
+        // This provides a subtle indication to the user about margin proximity
+        
+        // Get the current text and calculate approximate position
+        var text = _editorTextBox.Text ?? string.Empty;
+        var caretIndex = e.CaretIndex;
+        
+        // Calculate line position (simplified - could be enhanced with actual text metrics)
+        var textBeforeCaret = caretIndex < text.Length ? text.Substring(0, caretIndex) : text;
+        var lastNewlineIndex = textBeforeCaret.LastIndexOf('\n');
+        var lineStartIndex = lastNewlineIndex >= 0 ? lastNewlineIndex + 1 : 0;
+        var currentLineLength = caretIndex - lineStartIndex;
+        
+        // Estimate horizontal position based on character count
+        // This is a simplified approach; real implementation would use font metrics
+        var estimatedCharWidth = _editorTextBox.FontSize * 0.6; // Rough estimate
+        var estimatedXPosition = currentLineLength * estimatedCharWidth;
+        
+        // Calculate proximity to margins
+        var textAreaWidth = _editorTextBox.Width;
+        var proximityThreshold = 50; // pixels from edge
+        
+        // Determine if near margins
+        var isNearLeftMargin = estimatedXPosition < proximityThreshold;
+        var isNearRightMargin = estimatedXPosition > (textAreaWidth - proximityThreshold);
+        
+        // Update margin line appearance based on proximity
+        if (isNearLeftMargin || isNearRightMargin)
+        {
+            // Highlight margins when text is nearby
+            var highlightBrush = new SolidColorBrush(Color.FromRgb(100, 150, 200)); // Light blue
+            
+            if (isNearLeftMargin && _marginLines.Count > 0)
+            {
+                _marginLines[0].Stroke = highlightBrush;
+            }
+            
+            if (isNearRightMargin && _marginLines.Count > 1)
+            {
+                _marginLines[1].Stroke = highlightBrush;
+            }
+            
+            _logger.Debug("Cursor near margin at position: {Position}, NearLeft: {NearLeft}, NearRight: {NearRight}",
+                e.CaretIndex, isNearLeftMargin, isNearRightMargin);
+        }
+        else
+        {
+            // Reset to default color when not near margins
+            var defaultBrush = new SolidColorBrush(Color.FromRgb(180, 180, 180));
+            foreach (var line in _marginLines)
+            {
+                line.Stroke = defaultBrush;
+            }
+        }
     }
 
     /// <summary>
