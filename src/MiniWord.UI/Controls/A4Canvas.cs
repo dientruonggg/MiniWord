@@ -317,6 +317,97 @@ public partial class A4Canvas : UserControl
         }
     }
 
+    #region Cursor and Selection Management
+
+    /// <summary>
+    /// Gets the current selection start position (WinForms compatibility)
+    /// </summary>
+    public int SelectionStart => _editorTextBox?.SelectionStart ?? 0;
+
+    /// <summary>
+    /// Gets the current selection length (WinForms compatibility)
+    /// </summary>
+    public int SelectionLength => _editorTextBox?.SelectionLength ?? 0;
+
+    /// <summary>
+    /// Gets the currently selected text
+    /// </summary>
+    public string SelectedText => _editorTextBox?.GetSelectedText() ?? string.Empty;
+
+    /// <summary>
+    /// Gets the current text selection
+    /// </summary>
+    public TextSelection GetSelection()
+    {
+        return _editorTextBox?.GetSelection() ?? TextSelection.Empty();
+    }
+
+    /// <summary>
+    /// Sets the text selection
+    /// </summary>
+    /// <param name="start">Start position</param>
+    /// <param name="length">Selection length</param>
+    public void SetSelection(int start, int length)
+    {
+        _editorTextBox?.SetSelection(start, length);
+    }
+
+    /// <summary>
+    /// Moves the caret to the specified position
+    /// </summary>
+    /// <param name="position">Target position</param>
+    public void MoveCaretTo(int position)
+    {
+        _editorTextBox?.MoveCaretTo(position);
+    }
+
+    /// <summary>
+    /// Selects all text
+    /// </summary>
+    public void SelectAll()
+    {
+        _editorTextBox?.SelectAll();
+    }
+
+    /// <summary>
+    /// Clears the current selection
+    /// </summary>
+    public void ClearSelection()
+    {
+        _editorTextBox?.ClearSelection();
+    }
+
+    /// <summary>
+    /// Copies selected text to clipboard
+    /// </summary>
+    public void Copy()
+    {
+        _editorTextBox?.CopyToClipboard();
+    }
+
+    /// <summary>
+    /// Cuts selected text to clipboard
+    /// </summary>
+    public void Cut()
+    {
+        _editorTextBox?.CutToClipboard();
+    }
+
+    /// <summary>
+    /// Pastes text from clipboard
+    /// </summary>
+    public void Paste()
+    {
+        _editorTextBox?.PasteFromClipboard();
+    }
+
+    /// <summary>
+    /// Gets the current caret position
+    /// </summary>
+    public int CaretPosition => _editorTextBox?.CaretIndex ?? 0;
+
+    #endregion
+
     #region Text Rendering Pipeline
 
     /// <summary>
