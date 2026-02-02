@@ -1,21 +1,20 @@
 using Avalonia.Controls;
-using Avalonia.Interactivity;
 using MiniWord.Core.Models;
 using MiniWord.UI.ViewModels;
 using Serilog;
 using System;
+using System.ComponentModel;
 
 namespace MiniWord.UI.Views;
 
 /// <summary>
-/// Main window with MVVM pattern - command binding replaces event handlers
+/// Main window with MVVM pattern - uses data binding and property change notifications
 /// Keyboard shortcuts remain in code-behind as they are view-specific behavior
 /// </summary>
 public partial class MainWindow : Window
 {
     private readonly ILogger _logger;
     private readonly MainWindowViewModel _viewModel;
-    private DocumentMargins _currentMargins;
 
     public MainWindow()
     {
@@ -27,58 +26,45 @@ public partial class MainWindow : Window
         _viewModel = new MainWindowViewModel();
         DataContext = _viewModel;
 
-        _currentMargins = new DocumentMargins(); // Default margins
-
-        // Subscribe to ViewModel events
-        _viewModel.MarginsApplied += OnMarginsApplied;
+        // Subscribe to ViewModel property changes for margin updates
+        _viewModel.PropertyChanged += OnViewModelPropertyChanged;
 
         // Wire up keyboard event handlers (view-specific behavior)
-        SetupEventHandlers();
+        this.KeyDown += MainWindow_KeyDown;
 
         _logger.Information("MainWindow initialized successfully with MVVM pattern");
     }
 
     /// <summary>
-    /// Sets up keyboard event handlers - view-specific behavior
+    /// Handles property changes from ViewModel - updates UI controls when margins change
     /// </summary>
-    private void SetupEventHandlers()
+    private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        _logger.Debug("Setting up keyboard event handlers");
-
-        // Keyboard events remain in code-behind as they are view-specific
-        this.KeyDown += MainWindow_KeyDown;
-        
-        _logger.Information("Keyboard event handlers configured");
-    }
-
-    /// <summary>
-    /// Event handler for when margins are applied via ViewModel command
-    /// This updates the UI controls with the new margins
-    /// </summary>
-    private void OnMarginsApplied(object? sender, DocumentMargins margins)
-    {
-        _logger.Information("Margins applied event received: {Margins}", margins);
-
-        try
+        // When Margins property changes, update the UI controls
+        if (e.PropertyName == nameof(_viewModel.Margins))
         {
-            _currentMargins = margins;
-            
-            var canvas = this.FindControl<Controls.A4Canvas>("A4Canvas");
-            var ruler = this.FindControl<Controls.RulerControl>("RulerControl");
+            _logger.Information("Margins property changed in ViewModel: {Margins}", _viewModel.Margins);
 
-            canvas?.UpdateMargins(margins);
-            ruler?.UpdateMargins(margins);
+            try
+            {
+                var canvas = this.FindControl<Controls.A4Canvas>("A4Canvas");
+                var ruler = this.FindControl<Controls.RulerControl>("RulerControl");
 
-            _logger.Information("Margins applied to UI controls successfully");
-        }
-        catch (Exception ex)
-        {
-            _logger.Error(ex, "Failed to apply margins to UI controls");
+                canvas?.UpdateMargins(_viewModel.Margins);
+                ruler?.UpdateMargins(_viewModel.Margins);
+
+                _logger.Information("Margins applied to UI controls successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Failed to apply margins to UI controls");
+            }
         }
     }
 
     /// <summary>
     /// Keyboard event handler - view-specific behavior remains in code-behind
+    /// This is acceptable in MVVM as keyboard shortcuts are view-level concerns
     /// </summary>
     private void MainWindow_KeyDown(object? sender, Avalonia.Input.KeyEventArgs e)
     {
