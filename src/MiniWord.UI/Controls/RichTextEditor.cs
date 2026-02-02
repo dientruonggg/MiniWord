@@ -6,6 +6,7 @@ using Serilog;
 using System;
 using System.Threading.Tasks;
 using MiniWord.Core.Models;
+using MiniWord.UI.Utilities;
 
 namespace MiniWord.UI.Controls;
 
@@ -15,10 +16,12 @@ namespace MiniWord.UI.Controls;
 public class RichTextEditor : TextBox
 {
     private readonly ILogger _logger;
+    private readonly DebounceTimer _textChangeDebouncer;
 
     public RichTextEditor()
     {
         _logger = Log.ForContext<RichTextEditor>();
+        _textChangeDebouncer = new DebounceTimer(_logger, delayMilliseconds: 300);
         InitializeEditor();
     }
 
@@ -48,6 +51,12 @@ public class RichTextEditor : TextBox
     /// Event raised when text selection changes
     /// </summary>
     public event EventHandler<SelectionChangedEventArgs>? SelectionChanged;
+
+    /// <summary>
+    /// Event raised when text content changes (debounced to avoid excessive reflow calculations)
+    /// This event fires after a 300ms delay from the last text change
+    /// </summary>
+    public event EventHandler<TextChangedEventArgs>? DebouncedTextChanged;
 
     /// <summary>
     /// Gets the current selection start position (maps to WinForms SelectionStart)
@@ -318,6 +327,32 @@ public class RichTextEditor : TextBox
             var selection = GetSelection();
             SelectionChanged?.Invoke(this, new SelectionChangedEventArgs(selection));
         }
+
+        // Monitor text changes with debouncing to avoid excessive reflow calculations
+        if (change.Property == TextProperty)
+        {
+            _ = HandleDebouncedTextChangeAsync();
+        }
+    }
+
+    /// <summary>
+    /// Handles text changes with debouncing to avoid excessive reflow calculations
+    /// </summary>
+    private async Task HandleDebouncedTextChangeAsync()
+    {
+        try
+        {
+            await _textChangeDebouncer.DebounceAsync(() =>
+            {
+                // Fire the debounced text changed event
+                DebouncedTextChanged?.Invoke(this, new TextChangedEventArgs(Text ?? string.Empty));
+                _logger.Debug("Debounced text change event fired, text length: {Length}", Text?.Length ?? 0);
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(ex, "Error handling debounced text change");
+        }
     }
 
     protected override void OnKeyDown(KeyEventArgs e)
@@ -349,6 +384,16 @@ public class RichTextEditor : TextBox
         base.OnKeyDown(e);
     }
 
+    /// <summary>
+    /// Disposes resources used by the editor
+    /// </summary>
+    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnDetachedFromVisualTree(e);
+        _textChangeDebouncer?.Dispose();
+        _logger.Debug("RichTextEditor disposed");
+    }
+
     #endregion
 }
 
@@ -375,5 +420,18 @@ public class SelectionChangedEventArgs : EventArgs
     public SelectionChangedEventArgs(TextSelection selection)
     {
         Selection = selection ?? throw new ArgumentNullException(nameof(selection));
+    }
+}
+
+/// <summary>
+/// Event arguments for debounced text changes
+/// </summary>
+public class TextChangedEventArgs : EventArgs
+{
+    public string Text { get; }
+
+    public TextChangedEventArgs(string text)
+    {
+        Text = text ?? string.Empty;
     }
 }
