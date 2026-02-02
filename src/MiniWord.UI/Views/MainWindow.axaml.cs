@@ -8,8 +8,8 @@ using System;
 namespace MiniWord.UI.Views;
 
 /// <summary>
-/// Main window demonstrating Event/Delegate pattern (similar to WinForms)
-/// This shows how WinForms KeyDown/KeyPress maps to Avalonia events
+/// Main window with MVVM pattern - command binding replaces event handlers
+/// Keyboard shortcuts remain in code-behind as they are view-specific behavior
 /// </summary>
 public partial class MainWindow : Window
 {
@@ -29,87 +29,56 @@ public partial class MainWindow : Window
 
         _currentMargins = new DocumentMargins(); // Default margins
 
-        // Wire up event handlers (Delegate/Event pattern like WinForms)
+        // Subscribe to ViewModel events
+        _viewModel.MarginsApplied += OnMarginsApplied;
+
+        // Wire up keyboard event handlers (view-specific behavior)
         SetupEventHandlers();
 
-        _logger.Information("MainWindow initialized successfully");
+        _logger.Information("MainWindow initialized successfully with MVVM pattern");
     }
 
     /// <summary>
-    /// Sets up event handlers - demonstrates C# Delegate/Event pattern
-    /// Similar to WinForms: button.Click += Button_Click
+    /// Sets up keyboard event handlers - view-specific behavior
     /// </summary>
     private void SetupEventHandlers()
     {
-        _logger.Debug("Setting up event handlers");
+        _logger.Debug("Setting up keyboard event handlers");
 
-        // Button click event (like WinForms)
-        var applyButton = this.FindControl<Button>("ApplyMarginsButton");
-        if (applyButton != null)
-        {
-            applyButton.Click += ApplyMarginsButton_Click;
-            _logger.Debug("ApplyMarginsButton Click event handler attached");
-        }
-
-        // Keyboard events (mapping from WinForms to Avalonia)
-        // WinForms: KeyDown event → Avalonia: KeyDown event (same name!)
+        // Keyboard events remain in code-behind as they are view-specific
         this.KeyDown += MainWindow_KeyDown;
         
-        _logger.Information("All event handlers configured");
+        _logger.Information("Keyboard event handlers configured");
     }
 
     /// <summary>
-    /// Event handler for Apply Margins button
-    /// Demonstrates: EventHandler delegate pattern (like WinForms button.Click)
+    /// Event handler for when margins are applied via ViewModel command
+    /// This updates the UI controls with the new margins
     /// </summary>
-    private void ApplyMarginsButton_Click(object? sender, RoutedEventArgs e)
+    private void OnMarginsApplied(object? sender, DocumentMargins margins)
     {
-        _logger.Information("Apply Margins button clicked");
+        _logger.Information("Margins applied event received: {Margins}", margins);
 
         try
         {
-            var leftMarginControl = this.FindControl<NumericUpDown>("LeftMarginInput");
-            var rightMarginControl = this.FindControl<NumericUpDown>("RightMarginInput");
-
-            if (leftMarginControl == null || rightMarginControl == null)
-            {
-                _logger.Error("Margin controls not found");
-                return;
-            }
-
-            // Convert mm to pixels (96 DPI: 1 inch = 25.4mm = 96px)
-            double mmToPixels = 96.0 / 25.4;
-            double leftPx = Convert.ToDouble(leftMarginControl.Value ?? 25.4m) * mmToPixels;
-            double rightPx = Convert.ToDouble(rightMarginControl.Value ?? 25.4m) * mmToPixels;
-
-            var newMargins = new DocumentMargins(leftPx, rightPx, 96, 96);
-
-            _logger.Information("Applying new margins: {Margins}", newMargins);
-
-            // Update controls
-            _currentMargins = newMargins;
+            _currentMargins = margins;
             
             var canvas = this.FindControl<Controls.A4Canvas>("A4Canvas");
             var ruler = this.FindControl<Controls.RulerControl>("RulerControl");
 
-            canvas?.UpdateMargins(newMargins);
-            ruler?.UpdateMargins(newMargins);
+            canvas?.UpdateMargins(margins);
+            ruler?.UpdateMargins(margins);
 
-            _logger.Information("Margins applied successfully. Text will reflow automatically.");
+            _logger.Information("Margins applied to UI controls successfully");
         }
-        catch (System.Exception ex)
+        catch (Exception ex)
         {
-            _logger.Error(ex, "Failed to apply margins");
+            _logger.Error(ex, "Failed to apply margins to UI controls");
         }
     }
 
     /// <summary>
-    /// Keyboard event handler
-    /// WinForms mapping: KeyDown event exists in both!
-    /// WinForms: private void Form_KeyDown(object sender, KeyEventArgs e)
-    /// Avalonia: private void Window_KeyDown(object sender, KeyEventArgs e)
-    /// 
-    /// The pattern is identical - just import Avalonia.Input for KeyEventArgs
+    /// Keyboard event handler - view-specific behavior remains in code-behind
     /// </summary>
     private void MainWindow_KeyDown(object? sender, Avalonia.Input.KeyEventArgs e)
     {
@@ -167,6 +136,5 @@ public partial class MainWindow : Window
         }
 
         // Other key handling can be added here
-        // Just like WinForms: check e.Key, e.KeyModifiers, etc.
     }
 }
