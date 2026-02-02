@@ -1,0 +1,5 @@
+[2026-02-02 05:32:19 INF] Test info message
+[2026-02-02 05:32:19 ERR] Exception occurred
+System.InvalidOperationException: Test exception
+[2026-02-02 05:32:19 WRN] Test warning message
+[2026-02-02 05:32:19 ERR] Test error message

@@ -301,3 +301,77 @@
 [2026-02-02 05:29:53] INFO: DocumentManager initialized with new document
 [2026-02-02 05:29:53] INFO: Paragraph appended: 11 characters
 [2026-02-02 05:29:53] INFO: New document created: New Document
+[2026-02-02 05:31:53] INFO: DocumentManager initialized with new document
+[2026-02-02 05:31:53] INFO: Paragraph appended: 5 characters
+[2026-02-02 05:31:53] INFO: Paragraph appended: 6 characters
+[2026-02-02 05:31:53] INFO: DocumentManager initialized with new document
+[2026-02-02 05:31:53] INFO: Paragraph appended: 5 characters
+[2026-02-02 05:31:53] INFO: Paragraph appended: 6 characters
+[2026-02-02 05:31:53] INFO: Paragraph appended: 5 characters
+[2026-02-02 05:31:53] INFO: Paragraph removed at index 1
+[2026-02-02 05:31:53] INFO: DocumentManager initialized with new document
+[2026-02-02 05:31:53] INFO: Paragraph appended: 11 characters
+[2026-02-02 05:31:53] INFO: Paragraph appended: 4 characters
+[2026-02-02 05:31:53] INFO: DocumentManager initialized with new document
+[2026-02-02 05:31:53] INFO: Paragraph appended: 5 characters
+[2026-02-02 05:31:53] INFO: Paragraph appended: 5 characters
+[2026-02-02 05:31:53] INFO: DocumentManager initialized with existing document
+[2026-02-02 05:31:53] INFO: DocumentManager initialized with new document
+[2026-02-02 05:31:53] INFO: Paragraph split at index 0, run 1
+[2026-02-02 05:31:53] INFO: DocumentManager initialized with new document
+[2026-02-02 05:31:53] INFO: DocumentManager initialized with new document
+[2026-02-02 05:31:53] INFO: Paragraph appended: 9 characters
+[2026-02-02 05:31:53] INFO: Paragraph appended: 9 characters
+[2026-02-02 05:31:53] INFO: Document cleared
+[2026-02-02 05:31:53] INFO: DocumentManager initialized with new document
+[2026-02-02 05:31:53] INFO: Paragraph appended: 6 characters
+[2026-02-02 05:31:53] INFO: Paragraph appended: 5 characters
+[2026-02-02 05:31:53] INFO: Paragraphs merged at index 0
+[2026-02-02 05:31:53] INFO: DocumentManager initialized with new document
+[2026-02-02 05:31:53] INFO: Text inserted at paragraph 2: 5 characters
+[2026-02-02 05:31:53] INFO: DocumentManager initialized with new document
+[2026-02-02 05:31:53] INFO: Paragraph appended: 5 characters
+[2026-02-02 05:31:53] INFO: Paragraph appended: 5 characters
+[2026-02-02 05:31:53] INFO: Paragraph inserted at index 1
+[2026-02-02 05:31:53] INFO: DocumentManager initialized with new document
+[2026-02-02 05:31:53] INFO: Text inserted at paragraph 0: 14 characters
+[2026-02-02 05:31:53] INFO: DocumentManager initialized with new document
+[2026-02-02 05:31:53] INFO: Paragraph appended: 11 characters
+[2026-02-02 05:31:53] INFO: New document created: New Document
+[2026-02-02 05:32:19] INFO: DocumentManager initialized with new document
+[2026-02-02 05:32:19] INFO: Paragraph appended: 5 characters
+[2026-02-02 05:32:19] INFO: Paragraph appended: 6 characters
+[2026-02-02 05:32:19] INFO: DocumentManager initialized with new document
+[2026-02-02 05:32:19] INFO: Paragraph appended: 5 characters
+[2026-02-02 05:32:19] INFO: Paragraph appended: 6 characters
+[2026-02-02 05:32:19] INFO: Paragraph appended: 5 characters
+[2026-02-02 05:32:19] INFO: Paragraph removed at index 1
+[2026-02-02 05:32:19] INFO: DocumentManager initialized with new document
+[2026-02-02 05:32:19] INFO: Paragraph appended: 11 characters
+[2026-02-02 05:32:19] INFO: Paragraph appended: 4 characters
+[2026-02-02 05:32:19] INFO: DocumentManager initialized with new document
+[2026-02-02 05:32:19] INFO: Paragraph appended: 5 characters
+[2026-02-02 05:32:19] INFO: Paragraph appended: 5 characters
+[2026-02-02 05:32:19] INFO: DocumentManager initialized with existing document
+[2026-02-02 05:32:19] INFO: DocumentManager initialized with new document
+[2026-02-02 05:32:19] INFO: Paragraph split at index 0, run 1
+[2026-02-02 05:32:19] INFO: DocumentManager initialized with new document
+[2026-02-02 05:32:19] INFO: DocumentManager initialized with new document
+[2026-02-02 05:32:19] INFO: Paragraph appended: 9 characters
+[2026-02-02 05:32:19] INFO: Paragraph appended: 9 characters
+[2026-02-02 05:32:19] INFO: Document cleared
+[2026-02-02 05:32:19] INFO: DocumentManager initialized with new document
+[2026-02-02 05:32:19] INFO: Paragraph appended: 6 characters
+[2026-02-02 05:32:19] INFO: Paragraph appended: 5 characters
+[2026-02-02 05:32:19] INFO: Paragraphs merged at index 0
+[2026-02-02 05:32:19] INFO: DocumentManager initialized with new document
+[2026-02-02 05:32:19] INFO: Text inserted at paragraph 2: 5 characters
+[2026-02-02 05:32:19] INFO: DocumentManager initialized with new document
+[2026-02-02 05:32:19] INFO: Paragraph appended: 5 characters
+[2026-02-02 05:32:19] INFO: Paragraph appended: 5 characters
+[2026-02-02 05:32:19] INFO: Paragraph inserted at index 1
+[2026-02-02 05:32:19] INFO: DocumentManager initialized with new document
+[2026-02-02 05:32:19] INFO: Text inserted at paragraph 0: 14 characters
+[2026-02-02 05:32:19] INFO: DocumentManager initialized with new document
+[2026-02-02 05:32:19] INFO: Paragraph appended: 11 characters
+[2026-02-02 05:32:19] INFO: New document created: New Document
