@@ -1,3 +1,6 @@
+using MiniWord.Core.Exceptions;
+using Serilog;
+
 namespace MiniWord.Core.Models;
 
 /// <summary>
@@ -5,6 +8,7 @@ namespace MiniWord.Core.Models;
 /// </summary>
 public class DocumentMargins
 {
+    private static readonly ILogger _logger = Log.ForContext<DocumentMargins>();
     private double _left;
     private double _right;
     private double _top;
@@ -16,7 +20,11 @@ public class DocumentMargins
         set
         {
             if (value < 0)
-                throw new ArgumentException("Left margin cannot be negative", nameof(Left));
+            {
+                var ex = new MarginException($"Left margin cannot be negative. Attempted value: {value}");
+                _logger.Error(ex, "Invalid left margin value: {Value}", value);
+                throw ex;
+            }
             _left = value;
         }
     }
@@ -27,7 +35,11 @@ public class DocumentMargins
         set
         {
             if (value < 0)
-                throw new ArgumentException("Right margin cannot be negative", nameof(Right));
+            {
+                var ex = new MarginException($"Right margin cannot be negative. Attempted value: {value}");
+                _logger.Error(ex, "Invalid right margin value: {Value}", value);
+                throw ex;
+            }
             _right = value;
         }
     }
@@ -38,7 +50,11 @@ public class DocumentMargins
         set
         {
             if (value < 0)
-                throw new ArgumentException("Top margin cannot be negative", nameof(Top));
+            {
+                var ex = new MarginException($"Top margin cannot be negative. Attempted value: {value}");
+                _logger.Error(ex, "Invalid top margin value: {Value}", value);
+                throw ex;
+            }
             _top = value;
         }
     }
@@ -49,7 +65,11 @@ public class DocumentMargins
         set
         {
             if (value < 0)
-                throw new ArgumentException("Bottom margin cannot be negative", nameof(Bottom));
+            {
+                var ex = new MarginException($"Bottom margin cannot be negative. Attempted value: {value}");
+                _logger.Error(ex, "Invalid bottom margin value: {Value}", value);
+                throw ex;
+            }
             _bottom = value;
         }
     }

@@ -1,3 +1,4 @@
+using MiniWord.Core.Exceptions;
 using MiniWord.Core.Models;
 using Serilog;
 
@@ -25,16 +26,19 @@ public class MarginCalculator
 
         if (paperWidth <= 0)
         {
-            _logger.Error("Invalid paper width: {Width}", paperWidth);
-            throw new ArgumentException("Paper width must be positive", nameof(paperWidth));
+            var ex = new MarginException($"Paper width must be positive. Provided: {paperWidth}px");
+            _logger.Error(ex, "Invalid paper width: {Width}", paperWidth);
+            throw ex;
         }
 
         var availableWidth = paperWidth - margins.TotalHorizontal;
 
         if (availableWidth <= 0)
         {
-            _logger.Error("Margins too large: Available width is {Width}", availableWidth);
-            throw new ArgumentException("Margins are too large for the given paper width");
+            var ex = new MarginException(
+                $"Margins are too large for the given paper width. Paper width: {paperWidth}px, Total margins: {margins.TotalHorizontal}px");
+            _logger.Error(ex, "Margins too large: Available width is {Width}", availableWidth);
+            throw ex;
         }
 
         _logger.Debug("Available width calculated: {Width}px", availableWidth);
@@ -51,16 +55,19 @@ public class MarginCalculator
 
         if (paperHeight <= 0)
         {
-            _logger.Error("Invalid paper height: {Height}", paperHeight);
-            throw new ArgumentException("Paper height must be positive", nameof(paperHeight));
+            var ex = new MarginException($"Paper height must be positive. Provided: {paperHeight}px");
+            _logger.Error(ex, "Invalid paper height: {Height}", paperHeight);
+            throw ex;
         }
 
         var availableHeight = paperHeight - margins.TotalVertical;
 
         if (availableHeight <= 0)
         {
-            _logger.Error("Margins too large: Available height is {Height}", availableHeight);
-            throw new ArgumentException("Margins are too large for the given paper height");
+            var ex = new MarginException(
+                $"Margins are too large for the given paper height. Paper height: {paperHeight}px, Total margins: {margins.TotalVertical}px");
+            _logger.Error(ex, "Margins too large: Available height is {Height}", availableHeight);
+            throw ex;
         }
 
         _logger.Debug("Available height calculated: {Height}px", availableHeight);
@@ -82,7 +89,7 @@ public class MarginCalculator
             _logger.Information("Margins validated successfully");
             return true;
         }
-        catch (ArgumentException ex)
+        catch (MarginException ex)
         {
             _logger.Warning(ex, "Margin validation failed");
             return false;

@@ -163,7 +163,7 @@ public class TextFlowEngineTests
         double lineHeight = 0;
 
         // Act & Assert
-        Assert.Throws<ArgumentException>(() =>
+        Assert.Throws<DocumentException>(() =>
             _engine.EstimateLinesInHeight(availableHeight, lineHeight));
     }
 }

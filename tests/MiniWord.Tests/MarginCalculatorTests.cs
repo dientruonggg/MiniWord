@@ -1,3 +1,4 @@
+using MiniWord.Core.Exceptions;
 using MiniWord.Core.Models;
 using MiniWord.Core.Services;
 using Serilog;
@@ -47,7 +48,7 @@ public class MarginCalculatorTests
         var margins = new DocumentMargins(400, 400, 96, 96); // Too large
 
         // Act & Assert
-        Assert.Throws<ArgumentException>(() =>
+        Assert.Throws<MarginException>(() =>
             _calculator.CalculateAvailableWidth(paperWidth, margins));
     }
 
@@ -59,7 +60,7 @@ public class MarginCalculatorTests
         var margins = new DocumentMargins();
 
         // Act & Assert
-        Assert.Throws<ArgumentException>(() =>
+        Assert.Throws<MarginException>(() =>
             _calculator.CalculateAvailableWidth(paperWidth, margins));
     }
 
