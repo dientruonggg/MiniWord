@@ -55,3 +55,4 @@ TestResults/
 *.trx
 coverage.json
 *.cobertura.xml
+src/MiniWord.UI/logs/
