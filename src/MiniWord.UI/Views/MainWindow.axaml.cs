@@ -1,10 +1,12 @@
 using Avalonia.Controls;
+using Avalonia.Platform.Storage;
 using MiniWord.Core.Models;
 using MiniWord.UI.ViewModels;
 using Serilog;
 using System;
 using System.ComponentModel;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace MiniWord.UI.Views;
 
@@ -27,6 +29,12 @@ public partial class MainWindow : Window
         _viewModel = new MainWindowViewModel();
         DataContext = _viewModel;
 
+        // Wire up file dialog delegates
+        _viewModel.ShowOpenFileDialogAsync = ShowOpenFileDialogAsync;
+        _viewModel.ShowSaveFileDialogAsync = ShowSaveFileDialogAsync;
+        _viewModel.ShowConfirmationDialogAsync = ShowConfirmationDialogAsync;
+        _viewModel.CloseWindow = () => Close();
+
         // Subscribe to ViewModel property changes for margin updates
         _viewModel.PropertyChanged += OnViewModelPropertyChanged;
 
@@ -36,7 +44,56 @@ public partial class MainWindow : Window
         // Wire up keyboard event handlers (view-specific behavior)
         this.KeyDown += MainWindow_KeyDown;
 
-        _logger.Information("MainWindow initialized successfully with MVVM pattern and validation support");
+        // Wire up window closing event to check for unsaved changes
+        this.Closing += MainWindow_Closing;
+
+        _logger.Information("MainWindow initialized successfully with MVVM pattern, validation support, and file operations");
+    }
+
+    /// <summary>
+    /// Handles window closing event - prompts to save unsaved changes
+    /// </summary>
+    private async void MainWindow_Closing(object? sender, WindowClosingEventArgs e)
+    {
+        _logger.Information("Window closing event triggered");
+
+        // If document is dirty, prompt to save
+        if (_viewModel.IsDirty)
+        {
+            // Cancel the close event temporarily
+            e.Cancel = true;
+
+            try
+            {
+                var result = await ShowConfirmationDialogAsync(
+                    "Unsaved Changes",
+                    "Do you want to save changes before closing?");
+
+                if (result)
+                {
+                    // User wants to save
+                    await _viewModel.SaveAsync();
+                    
+                    // If still dirty (save was cancelled), don't close
+                    if (_viewModel.IsDirty)
+                    {
+                        _logger.Information("Save cancelled, window will not close");
+                        return;
+                    }
+                }
+
+                // Close the window for real
+                _logger.Information("Closing window after handling unsaved changes");
+                this.Closing -= MainWindow_Closing; // Remove handler to avoid loop
+                this.Close();
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Error handling window closing");
+                this.Closing -= MainWindow_Closing; // Remove handler
+                this.Close();
+            }
+        }
     }
 
     /// <summary>
@@ -125,7 +182,26 @@ public partial class MainWindow : Window
         // Ctrl+S for save (like WinForms)
         if (e.KeyModifiers == Avalonia.Input.KeyModifiers.Control && e.Key == Avalonia.Input.Key.S)
         {
-            _logger.Information("Ctrl+S pressed - Save action (not implemented yet)");
+            _logger.Information("Ctrl+S pressed - executing Save command");
+            _ = _viewModel.SaveAsync();
+            e.Handled = true;
+            return;
+        }
+
+        // Ctrl+N for new document
+        if (e.KeyModifiers == Avalonia.Input.KeyModifiers.Control && e.Key == Avalonia.Input.Key.N)
+        {
+            _logger.Information("Ctrl+N pressed - executing New command");
+            _ = _viewModel.NewAsync();
+            e.Handled = true;
+            return;
+        }
+
+        // Ctrl+O for open document
+        if (e.KeyModifiers == Avalonia.Input.KeyModifiers.Control && e.Key == Avalonia.Input.Key.O)
+        {
+            _logger.Information("Ctrl+O pressed - executing Open command");
+            _ = _viewModel.OpenAsync();
             e.Handled = true;
             return;
         }
@@ -168,4 +244,172 @@ public partial class MainWindow : Window
 
         // Other key handling can be added here
     }
+
+    #region File Dialog Implementations
+
+    /// <summary>
+    /// Shows an open file dialog and returns the selected file path
+    /// </summary>
+    private async Task<string?> ShowOpenFileDialogAsync()
+    {
+        try
+        {
+            _logger.Information("Opening file dialog...");
+
+            var storage = StorageProvider;
+            var result = await storage.OpenFilePickerAsync(new FilePickerOpenOptions
+            {
+                Title = "Open MiniWord Document",
+                AllowMultiple = false,
+                FileTypeFilter = new[]
+                {
+                    new FilePickerFileType("MiniWord Document")
+                    {
+                        Patterns = new[] { "*.miniword" }
+                    },
+                    new FilePickerFileType("All Files")
+                    {
+                        Patterns = new[] { "*.*" }
+                    }
+                }
+            });
+
+            if (result.Count > 0)
+            {
+                var filePath = result[0].Path.LocalPath;
+                _logger.Information("File selected: {FilePath}", filePath);
+                return filePath;
+            }
+
+            _logger.Information("No file selected");
+            return null;
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(ex, "Failed to show open file dialog");
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Shows a save file dialog and returns the selected file path
+    /// </summary>
+    private async Task<string?> ShowSaveFileDialogAsync()
+    {
+        try
+        {
+            _logger.Information("Opening save file dialog...");
+
+            var storage = StorageProvider;
+            var result = await storage.SaveFilePickerAsync(new FilePickerSaveOptions
+            {
+                Title = "Save MiniWord Document",
+                DefaultExtension = "miniword",
+                SuggestedFileName = "Untitled.miniword",
+                FileTypeChoices = new[]
+                {
+                    new FilePickerFileType("MiniWord Document")
+                    {
+                        Patterns = new[] { "*.miniword" }
+                    }
+                }
+            });
+
+            if (result != null)
+            {
+                var filePath = result.Path.LocalPath;
+                _logger.Information("File selected: {FilePath}", filePath);
+                return filePath;
+            }
+
+            _logger.Information("No file selected");
+            return null;
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(ex, "Failed to show save file dialog");
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Shows a confirmation dialog with Yes/No buttons
+    /// </summary>
+    private async Task<bool> ShowConfirmationDialogAsync(string title, string message)
+    {
+        try
+        {
+            _logger.Information("Showing confirmation dialog: {Title}", title);
+
+            var dialog = new Window
+            {
+                Title = title,
+                Width = 400,
+                Height = 150,
+                CanResize = false,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner
+            };
+
+            bool result = false;
+            var panel = new StackPanel
+            {
+                Margin = new Avalonia.Thickness(20),
+                Spacing = 15
+            };
+
+            panel.Children.Add(new TextBlock
+            {
+                Text = message,
+                TextWrapping = Avalonia.Media.TextWrapping.Wrap
+            });
+
+            var buttonPanel = new StackPanel
+            {
+                Orientation = Avalonia.Layout.Orientation.Horizontal,
+                HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Right,
+                Spacing = 10
+            };
+
+            var yesButton = new Button
+            {
+                Content = "Yes",
+                Width = 80,
+                Padding = new Avalonia.Thickness(10, 5)
+            };
+            yesButton.Click += (s, e) =>
+            {
+                result = true;
+                dialog.Close();
+            };
+
+            var noButton = new Button
+            {
+                Content = "No",
+                Width = 80,
+                Padding = new Avalonia.Thickness(10, 5)
+            };
+            noButton.Click += (s, e) =>
+            {
+                result = false;
+                dialog.Close();
+            };
+
+            buttonPanel.Children.Add(yesButton);
+            buttonPanel.Children.Add(noButton);
+            panel.Children.Add(buttonPanel);
+
+            dialog.Content = panel;
+            await dialog.ShowDialog(this);
+
+            _logger.Information("Confirmation dialog result: {Result}", result);
+            return result;
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(ex, "Failed to show confirmation dialog");
+            return false;
+        }
+    }
+
+    #endregion
 }

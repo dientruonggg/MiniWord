@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MiniWord.Core.Models;
@@ -21,6 +22,8 @@ public partial class MainWindowViewModel : ObservableObject, INotifyDataErrorInf
 {
     private readonly ILogger _logger;
     private readonly MarginCalculator _marginCalculator;
+    private readonly DocumentSerializer _documentSerializer;
+    private readonly A4Document _document;
     
     [ObservableProperty]
     private DocumentMargins _margins;
@@ -37,6 +40,27 @@ public partial class MainWindowViewModel : ObservableObject, INotifyDataErrorInf
     [ObservableProperty]
     private int _currentPage;
 
+    [ObservableProperty]
+    private string? _currentFilePath;
+
+    [ObservableProperty]
+    private bool _isDirty;
+
+    /// <summary>
+    /// Window title that reflects the current file and dirty state
+    /// </summary>
+    public string WindowTitle
+    {
+        get
+        {
+            var fileName = string.IsNullOrEmpty(CurrentFilePath) 
+                ? "Untitled" 
+                : System.IO.Path.GetFileName(CurrentFilePath);
+            var dirtyMarker = IsDirty ? "*" : "";
+            return $"{fileName}{dirtyMarker} - MiniWord";
+        }
+    }
+
     // Validation constants for margins (in millimeters)
     private const double MIN_MARGIN_MM = 0.0;
     private const double MAX_MARGIN_MM = 100.0;
@@ -50,13 +74,32 @@ public partial class MainWindowViewModel : ObservableObject, INotifyDataErrorInf
     {
         _logger = Log.ForContext<MainWindowViewModel>();
         _marginCalculator = new MarginCalculator(_logger);
+        _documentSerializer = new DocumentSerializer(_logger);
+        _document = new A4Document(_logger);
         _margins = new DocumentMargins(); // Default 1 inch margins
         _documentText = string.Empty;
         _pageCount = 1;
         _wordCount = 0;
         _currentPage = 1;
+        _currentFilePath = null;
+        _isDirty = false;
 
-        _logger.Information("MainWindowViewModel initialized with MVVM pattern and validation support");
+        // Subscribe to document property changes to track dirty state
+        _document.PropertyChanged += OnDocumentPropertyChanged;
+
+        _logger.Information("MainWindowViewModel initialized with MVVM pattern, validation support, and file operations");
+    }
+
+    /// <summary>
+    /// Handles document property changes to track dirty state
+    /// </summary>
+    private void OnDocumentPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(A4Document.IsDirty))
+        {
+            IsDirty = _document.IsDirty;
+            _logger.Debug("Document dirty state changed to: {IsDirty}", IsDirty);
+        }
     }
 
     #region INotifyDataErrorInfo Implementation
@@ -295,6 +338,13 @@ public partial class MainWindowViewModel : ObservableObject, INotifyDataErrorInf
     {
         _logger.Debug("Document text changed (length: {Length})", value?.Length ?? 0);
         UpdateWordCount();
+        
+        // Mark document as dirty when text changes
+        if (!IsDirty)
+        {
+            IsDirty = true;
+            _document.Content = value ?? string.Empty;
+        }
     }
 
     partial void OnMarginsChanged(DocumentMargins value)
@@ -304,4 +354,286 @@ public partial class MainWindowViewModel : ObservableObject, INotifyDataErrorInf
         OnPropertyChanged(nameof(LeftMarginMm));
         OnPropertyChanged(nameof(RightMarginMm));
     }
+
+    partial void OnCurrentFilePathChanged(string? value)
+    {
+        _logger.Debug("Current file path changed: {FilePath}", value ?? "(null)");
+        OnPropertyChanged(nameof(WindowTitle));
+    }
+
+    partial void OnIsDirtyChanged(bool value)
+    {
+        _logger.Debug("Is dirty changed: {IsDirty}", value);
+        OnPropertyChanged(nameof(WindowTitle));
+    }
+
+    #region File Operations
+
+    /// <summary>
+    /// Delegate for showing file dialogs (injected by View)
+    /// </summary>
+    public Func<Task<string?>>? ShowOpenFileDialogAsync { get; set; }
+
+    /// <summary>
+    /// Delegate for showing save file dialogs (injected by View)
+    /// </summary>
+    public Func<Task<string?>>? ShowSaveFileDialogAsync { get; set; }
+
+    /// <summary>
+    /// Delegate for showing confirmation dialogs (injected by View)
+    /// </summary>
+    public Func<string, string, Task<bool>>? ShowConfirmationDialogAsync { get; set; }
+
+    /// <summary>
+    /// Delegate for closing the window (injected by View)
+    /// </summary>
+    public Action? CloseWindow { get; set; }
+
+    /// <summary>
+    /// Public method for Save (can be called from code-behind for keyboard shortcuts)
+    /// </summary>
+    public Task SaveAsync() => SaveInternalAsync();
+
+    /// <summary>
+    /// Public method for New (can be called from code-behind for keyboard shortcuts)
+    /// </summary>
+    public Task NewAsync() => NewInternalAsync();
+
+    /// <summary>
+    /// Public method for Open (can be called from code-behind for keyboard shortcuts)
+    /// </summary>
+    public Task OpenAsync() => OpenInternalAsync();
+
+    /// <summary>
+    /// Command to create a new document
+    /// </summary>
+    [RelayCommand]
+    private async Task NewInternalAsync()
+    {
+        _logger.Information("New command executed");
+
+        try
+        {
+            // Check for unsaved changes
+            if (IsDirty && ShowConfirmationDialogAsync != null)
+            {
+                var result = await ShowConfirmationDialogAsync(
+                    "Unsaved Changes",
+                    "Do you want to save changes to the current document before creating a new one?");
+                
+                if (result)
+                {
+                    // User wants to save - execute save command
+                    await SaveAsync();
+                    // If save was cancelled, don't proceed with new
+                    if (IsDirty) return;
+                }
+            }
+
+            // Create new document
+            _document.Content = string.Empty;
+            _document.Pages.Clear();
+            _document.AddPage();
+            _document.MarkAsSaved();
+            
+            // Update ViewModel
+            DocumentText = string.Empty;
+            CurrentFilePath = null;
+            IsDirty = false;
+            UpdateWordCount();
+
+            _logger.Information("New document created successfully");
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(ex, "Failed to create new document");
+        }
+    }
+
+    /// <summary>
+    /// Command to open an existing document
+    /// </summary>
+    [RelayCommand]
+    private async Task OpenInternalAsync()
+    {
+        _logger.Information("Open command executed");
+
+        try
+        {
+            // Check for unsaved changes
+            if (IsDirty && ShowConfirmationDialogAsync != null)
+            {
+                var result = await ShowConfirmationDialogAsync(
+                    "Unsaved Changes",
+                    "Do you want to save changes to the current document before opening another?");
+                
+                if (result)
+                {
+                    // User wants to save - execute save command
+                    await SaveAsync();
+                    // If save was cancelled, don't proceed with open
+                    if (IsDirty) return;
+                }
+            }
+
+            // Show open file dialog
+            if (ShowOpenFileDialogAsync == null)
+            {
+                _logger.Warning("ShowOpenFileDialogAsync delegate not set");
+                return;
+            }
+
+            var filePath = await ShowOpenFileDialogAsync();
+            if (string.IsNullOrEmpty(filePath))
+            {
+                _logger.Information("Open file dialog cancelled");
+                return;
+            }
+
+            // Deserialize document
+            var loadedDocument = await _documentSerializer.DeserializeAsync(filePath, _logger);
+            
+            // Update current document
+            _document.Content = loadedDocument.Content;
+            _document.UpdateMargins(loadedDocument.Margins);
+            _document.Pages.Clear();
+            foreach (var page in loadedDocument.Pages)
+            {
+                _document.Pages.Add(page);
+            }
+            _document.GoToPage(loadedDocument.CurrentPageIndex);
+            _document.MarkAsSaved();
+
+            // Update ViewModel
+            DocumentText = loadedDocument.Content;
+            Margins = loadedDocument.Margins;
+            CurrentFilePath = filePath;
+            IsDirty = false;
+            UpdateWordCount();
+
+            _logger.Information("Document opened successfully from {FilePath}", filePath);
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(ex, "Failed to open document");
+        }
+    }
+
+    /// <summary>
+    /// Command to save the current document
+    /// </summary>
+    [RelayCommand]
+    private async Task SaveInternalAsync()
+    {
+        _logger.Information("Save command executed");
+
+        try
+        {
+            // If no file path, do Save As
+            if (string.IsNullOrEmpty(CurrentFilePath))
+            {
+                await SaveAsInternalAsync();
+                return;
+            }
+
+            // Update document content from UI
+            _document.Content = DocumentText;
+            _document.UpdateMargins(Margins);
+
+            // Serialize document
+            await _documentSerializer.SerializeAsync(_document, CurrentFilePath);
+            
+            // Mark as saved
+            _document.MarkAsSaved();
+            IsDirty = false;
+
+            _logger.Information("Document saved successfully to {FilePath}", CurrentFilePath);
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(ex, "Failed to save document");
+        }
+    }
+
+    /// <summary>
+    /// Command to save the current document with a new name
+    /// </summary>
+    [RelayCommand]
+    private async Task SaveAsInternalAsync()
+    {
+        _logger.Information("SaveAs command executed");
+
+        try
+        {
+            // Show save file dialog
+            if (ShowSaveFileDialogAsync == null)
+            {
+                _logger.Warning("ShowSaveFileDialogAsync delegate not set");
+                return;
+            }
+
+            var filePath = await ShowSaveFileDialogAsync();
+            if (string.IsNullOrEmpty(filePath))
+            {
+                _logger.Information("Save file dialog cancelled");
+                return;
+            }
+
+            // Update document content from UI
+            _document.Content = DocumentText;
+            _document.UpdateMargins(Margins);
+
+            // Serialize document
+            await _documentSerializer.SerializeAsync(_document, filePath);
+            
+            // Mark as saved and update file path
+            _document.MarkAsSaved();
+            CurrentFilePath = filePath;
+            IsDirty = false;
+
+            _logger.Information("Document saved successfully to {FilePath}", filePath);
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(ex, "Failed to save document as");
+        }
+    }
+
+    /// <summary>
+    /// Command to exit the application
+    /// </summary>
+    [RelayCommand]
+    private async Task ExitInternalAsync()
+    {
+        _logger.Information("Exit command executed");
+
+        try
+        {
+            // Check for unsaved changes
+            if (IsDirty && ShowConfirmationDialogAsync != null)
+            {
+                var result = await ShowConfirmationDialogAsync(
+                    "Unsaved Changes",
+                    "Do you want to save changes before exiting?");
+                
+                if (result)
+                {
+                    // User wants to save - execute save command
+                    await SaveAsync();
+                    // If save was cancelled, don't exit
+                    if (IsDirty) return;
+                }
+            }
+
+            // Close the window
+            CloseWindow?.Invoke();
+            _logger.Information("Application exiting");
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(ex, "Failed to exit application");
+        }
+    }
+
+    #endregion
 }

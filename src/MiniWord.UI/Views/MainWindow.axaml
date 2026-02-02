@@ -7,7 +7,7 @@
         mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="700"
         x:Class="MiniWord.UI.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
-        Title="MiniWord - Document Editor"
+        Title="{Binding WindowTitle}"
         Width="1000" Height="700"
         Background="#F5F5F5">
 
@@ -20,6 +20,18 @@
     </Window.Resources>
 
     <DockPanel LastChildFill="True">
+        
+        <!-- Menu Bar -->
+        <Menu DockPanel.Dock="Top" Background="White">
+            <MenuItem Header="_File">
+                <MenuItem Header="_New" Command="{Binding NewInternalCommand}" HotKey="Ctrl+N"/>
+                <MenuItem Header="_Open..." Command="{Binding OpenInternalCommand}" HotKey="Ctrl+O"/>
+                <MenuItem Header="_Save" Command="{Binding SaveInternalCommand}" HotKey="Ctrl+S"/>
+                <MenuItem Header="Save _As..." Command="{Binding SaveAsInternalCommand}" HotKey="Ctrl+Shift+S"/>
+                <Separator/>
+                <MenuItem Header="E_xit" Command="{Binding ExitInternalCommand}"/>
+            </MenuItem>
+        </Menu>
         
         <!-- Toolbar -->
         <Border DockPanel.Dock="Top" Background="{StaticResource PrimaryBlueBrush}" 
