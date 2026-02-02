@@ -26,6 +26,10 @@
             <MenuItem Header="_File">
                 <MenuItem Header="_New" Command="{Binding NewInternalCommand}" HotKey="Ctrl+N"/>
                 <MenuItem Header="_Open..." Command="{Binding OpenInternalCommand}" HotKey="Ctrl+O"/>
+                <MenuItem Header="Open _Recent" Name="OpenRecentMenuItem">
+                    <!-- Recent files submenu items will be dynamically populated -->
+                </MenuItem>
+                <Separator/>
                 <MenuItem Header="_Save" Command="{Binding SaveInternalCommand}" HotKey="Ctrl+S"/>
                 <MenuItem Header="Save _As..." Command="{Binding SaveAsInternalCommand}" HotKey="Ctrl+Shift+S"/>
                 <Separator/>

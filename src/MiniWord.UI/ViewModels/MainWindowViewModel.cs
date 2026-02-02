@@ -1,7 +1,9 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
@@ -23,6 +25,7 @@ public partial class MainWindowViewModel : ObservableObject, INotifyDataErrorInf
     private readonly ILogger _logger;
     private readonly MarginCalculator _marginCalculator;
     private readonly DocumentSerializer _documentSerializer;
+    private readonly RecentFilesManager _recentFilesManager;
     private readonly A4Document _document;
     
     [ObservableProperty]
@@ -45,6 +48,12 @@ public partial class MainWindowViewModel : ObservableObject, INotifyDataErrorInf
 
     [ObservableProperty]
     private bool _isDirty;
+
+    /// <summary>
+    /// Observable collection of recent files for UI binding (P4.3)
+    /// </summary>
+    [ObservableProperty]
+    private ObservableCollection<string> _recentFiles;
 
     /// <summary>
     /// Window title that reflects the current file and dirty state
@@ -75,6 +84,7 @@ public partial class MainWindowViewModel : ObservableObject, INotifyDataErrorInf
         _logger = Log.ForContext<MainWindowViewModel>();
         _marginCalculator = new MarginCalculator(_logger);
         _documentSerializer = new DocumentSerializer(_logger);
+        _recentFilesManager = new RecentFilesManager(_logger);
         _document = new A4Document(_logger);
         _margins = new DocumentMargins(); // Default 1 inch margins
         _documentText = string.Empty;
@@ -83,11 +93,16 @@ public partial class MainWindowViewModel : ObservableObject, INotifyDataErrorInf
         _currentPage = 1;
         _currentFilePath = null;
         _isDirty = false;
+        _recentFiles = new ObservableCollection<string>();
+
+        // Load recent files from disk (P4.3)
+        _recentFilesManager.Load();
+        RefreshRecentFiles();
 
         // Subscribe to document property changes to track dirty state
         _document.PropertyChanged += OnDocumentPropertyChanged;
 
-        _logger.Information("MainWindowViewModel initialized with MVVM pattern, validation support, and file operations");
+        _logger.Information("MainWindowViewModel initialized with MVVM pattern, validation support, file operations, and recent files tracking");
     }
 
     /// <summary>
@@ -511,6 +526,10 @@ public partial class MainWindowViewModel : ObservableObject, INotifyDataErrorInf
             IsDirty = false;
             UpdateWordCount();
 
+            // Add to recent files (P4.3)
+            _recentFilesManager.AddRecentFile(filePath);
+            RefreshRecentFiles();
+
             _logger.Information("Document opened successfully from {FilePath}", filePath);
         }
         catch (Exception ex)
@@ -546,6 +565,10 @@ public partial class MainWindowViewModel : ObservableObject, INotifyDataErrorInf
             // Mark as saved
             _document.MarkAsSaved();
             IsDirty = false;
+
+            // Add to recent files (P4.3)
+            _recentFilesManager.AddRecentFile(CurrentFilePath);
+            RefreshRecentFiles();
 
             _logger.Information("Document saved successfully to {FilePath}", CurrentFilePath);
         }
@@ -591,6 +614,10 @@ public partial class MainWindowViewModel : ObservableObject, INotifyDataErrorInf
             CurrentFilePath = filePath;
             IsDirty = false;
 
+            // Add to recent files (P4.3)
+            _recentFilesManager.AddRecentFile(filePath);
+            RefreshRecentFiles();
+
             _logger.Information("Document saved successfully to {FilePath}", filePath);
         }
         catch (Exception ex)
@@ -632,6 +659,99 @@ public partial class MainWindowViewModel : ObservableObject, INotifyDataErrorInf
         catch (Exception ex)
         {
             _logger.Error(ex, "Failed to exit application");
+        }
+    }
+
+    /// <summary>
+    /// Refreshes the observable collection of recent files from the manager (P4.3)
+    /// </summary>
+    private void RefreshRecentFiles()
+    {
+        try
+        {
+            RecentFiles.Clear();
+            foreach (var file in _recentFilesManager.RecentFiles)
+            {
+                RecentFiles.Add(file);
+            }
+            
+            _logger.Debug("Refreshed recent files list. Count: {Count}", RecentFiles.Count);
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(ex, "Failed to refresh recent files");
+        }
+    }
+
+    /// <summary>
+    /// Command to open a file from the recent files list (P4.3)
+    /// </summary>
+    [RelayCommand]
+    private async Task OpenRecentFileAsync(string filePath)
+    {
+        _logger.Information("OpenRecentFile command executed for: {FilePath}", filePath);
+
+        try
+        {
+            // Check if file still exists
+            if (!File.Exists(filePath))
+            {
+                _logger.Warning("Recent file no longer exists: {FilePath}", filePath);
+                
+                // Remove from recent files
+                _recentFilesManager.RemoveRecentFile(filePath);
+                RefreshRecentFiles();
+                
+                // TODO: Show error dialog to user
+                return;
+            }
+
+            // Check for unsaved changes
+            if (IsDirty && ShowConfirmationDialogAsync != null)
+            {
+                var result = await ShowConfirmationDialogAsync(
+                    "Unsaved Changes",
+                    "Do you want to save changes to the current document before opening another?");
+                
+                if (result)
+                {
+                    // User wants to save - execute save command
+                    await SaveAsync();
+                    // If save was cancelled, don't proceed with open
+                    if (IsDirty) return;
+                }
+            }
+
+            // Deserialize document
+            var loadedDocument = await _documentSerializer.DeserializeAsync(filePath, _logger);
+            
+            // Update current document
+            _document.Content = loadedDocument.Content;
+            _document.UpdateMargins(loadedDocument.Margins);
+            _document.Pages.Clear();
+            foreach (var page in loadedDocument.Pages)
+            {
+                _document.Pages.Add(page);
+            }
+            _document.GoToPage(loadedDocument.CurrentPageIndex);
+            _document.MarkAsSaved();
+
+            // Update ViewModel
+            DocumentText = loadedDocument.Content;
+            Margins = loadedDocument.Margins;
+            CurrentFilePath = filePath;
+            IsDirty = false;
+            UpdateWordCount();
+
+            // Update recent files (moves to top)
+            _recentFilesManager.AddRecentFile(filePath);
+            RefreshRecentFiles();
+
+            _logger.Information("Document opened from recent files: {FilePath}", filePath);
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(ex, "Failed to open recent file: {FilePath}", filePath);
         }
     }
 
