@@ -1,0 +1,7 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/MiniWord.Core/MiniWord.Core.csproj" />
+    <Project Path="src/MiniWord.Tests/MiniWord.Tests.csproj" />
+    <Project Path="src/MiniWord.UI/MiniWord.UI.csproj" />
+  </Folder>
+</Solution>
