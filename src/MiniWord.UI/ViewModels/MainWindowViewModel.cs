@@ -420,6 +420,61 @@ public partial class MainWindowViewModel : ObservableObject, INotifyDataErrorInf
     public Task OpenAsync() => OpenInternalAsync();
 
     /// <summary>
+    /// Helper method to check for unsaved changes and prompt user to save
+    /// </summary>
+    /// <returns>True if should proceed, false if cancelled</returns>
+    private async Task<bool> CheckUnsavedChangesAsync()
+    {
+        if (IsDirty && ShowConfirmationDialogAsync != null)
+        {
+            var result = await ShowConfirmationDialogAsync(
+                "Unsaved Changes",
+                "Do you want to save changes to the current document before opening another?");
+            
+            if (result)
+            {
+                // User wants to save - execute save command
+                await SaveAsync();
+                // If save was cancelled, don't proceed
+                if (IsDirty) return false;
+            }
+        }
+        return true;
+    }
+
+    /// <summary>
+    /// Helper method to load a document from file path
+    /// </summary>
+    /// <param name="filePath">Path to the file to load</param>
+    private async Task LoadDocumentFromFileAsync(string filePath)
+    {
+        // Deserialize document
+        var loadedDocument = await _documentSerializer.DeserializeAsync(filePath, _logger);
+        
+        // Update current document
+        _document.Content = loadedDocument.Content;
+        _document.UpdateMargins(loadedDocument.Margins);
+        _document.Pages.Clear();
+        foreach (var page in loadedDocument.Pages)
+        {
+            _document.Pages.Add(page);
+        }
+        _document.GoToPage(loadedDocument.CurrentPageIndex);
+        _document.MarkAsSaved();
+
+        // Update ViewModel
+        DocumentText = loadedDocument.Content;
+        Margins = loadedDocument.Margins;
+        CurrentFilePath = filePath;
+        IsDirty = false;
+        UpdateWordCount();
+
+        // Add to recent files (P4.3)
+        _recentFilesManager.AddRecentFile(filePath);
+        RefreshRecentFiles();
+    }
+
+    /// <summary>
     /// Command to create a new document
     /// </summary>
     [RelayCommand]
@@ -476,20 +531,8 @@ public partial class MainWindowViewModel : ObservableObject, INotifyDataErrorInf
         try
         {
             // Check for unsaved changes
-            if (IsDirty && ShowConfirmationDialogAsync != null)
-            {
-                var result = await ShowConfirmationDialogAsync(
-                    "Unsaved Changes",
-                    "Do you want to save changes to the current document before opening another?");
-                
-                if (result)
-                {
-                    // User wants to save - execute save command
-                    await SaveAsync();
-                    // If save was cancelled, don't proceed with open
-                    if (IsDirty) return;
-                }
-            }
+            if (!await CheckUnsavedChangesAsync())
+                return;
 
             // Show open file dialog
             if (ShowOpenFileDialogAsync == null)
@@ -505,30 +548,8 @@ public partial class MainWindowViewModel : ObservableObject, INotifyDataErrorInf
                 return;
             }
 
-            // Deserialize document
-            var loadedDocument = await _documentSerializer.DeserializeAsync(filePath, _logger);
-            
-            // Update current document
-            _document.Content = loadedDocument.Content;
-            _document.UpdateMargins(loadedDocument.Margins);
-            _document.Pages.Clear();
-            foreach (var page in loadedDocument.Pages)
-            {
-                _document.Pages.Add(page);
-            }
-            _document.GoToPage(loadedDocument.CurrentPageIndex);
-            _document.MarkAsSaved();
-
-            // Update ViewModel
-            DocumentText = loadedDocument.Content;
-            Margins = loadedDocument.Margins;
-            CurrentFilePath = filePath;
-            IsDirty = false;
-            UpdateWordCount();
-
-            // Add to recent files (P4.3)
-            _recentFilesManager.AddRecentFile(filePath);
-            RefreshRecentFiles();
+            // Load the document
+            await LoadDocumentFromFileAsync(filePath);
 
             _logger.Information("Document opened successfully from {FilePath}", filePath);
         }
@@ -707,45 +728,11 @@ public partial class MainWindowViewModel : ObservableObject, INotifyDataErrorInf
             }
 
             // Check for unsaved changes
-            if (IsDirty && ShowConfirmationDialogAsync != null)
-            {
-                var result = await ShowConfirmationDialogAsync(
-                    "Unsaved Changes",
-                    "Do you want to save changes to the current document before opening another?");
-                
-                if (result)
-                {
-                    // User wants to save - execute save command
-                    await SaveAsync();
-                    // If save was cancelled, don't proceed with open
-                    if (IsDirty) return;
-                }
-            }
+            if (!await CheckUnsavedChangesAsync())
+                return;
 
-            // Deserialize document
-            var loadedDocument = await _documentSerializer.DeserializeAsync(filePath, _logger);
-            
-            // Update current document
-            _document.Content = loadedDocument.Content;
-            _document.UpdateMargins(loadedDocument.Margins);
-            _document.Pages.Clear();
-            foreach (var page in loadedDocument.Pages)
-            {
-                _document.Pages.Add(page);
-            }
-            _document.GoToPage(loadedDocument.CurrentPageIndex);
-            _document.MarkAsSaved();
-
-            // Update ViewModel
-            DocumentText = loadedDocument.Content;
-            Margins = loadedDocument.Margins;
-            CurrentFilePath = filePath;
-            IsDirty = false;
-            UpdateWordCount();
-
-            // Update recent files (moves to top)
-            _recentFilesManager.AddRecentFile(filePath);
-            RefreshRecentFiles();
+            // Load the document
+            await LoadDocumentFromFileAsync(filePath);
 
             _logger.Information("Document opened from recent files: {FilePath}", filePath);
         }

@@ -5,6 +5,7 @@ using MiniWord.UI.ViewModels;
 using Serilog;
 using System;
 using System.ComponentModel;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -463,7 +464,7 @@ public partial class MainWindow : Window
             // Add menu item for each recent file
             foreach (var filePath in _viewModel.RecentFiles)
             {
-                var fileName = System.IO.Path.GetFileName(filePath);
+                var fileName = Path.GetFileName(filePath);
                 var menuItem = new MenuItem
                 {
                     Header = fileName,
