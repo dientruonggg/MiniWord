@@ -1,0 +1,57 @@
+## --- .NET Core & Standard ---
+[Bb]in/
+[Oo]bj/
+.config/
+*.user
+*.userosscache
+*.sln.docstates
+*.suo
+
+## --- Avalonia UI & Build Results ---
+# Không bao giờ commit file build (exe, dll)
+*.exe
+*.dll
+*.pdb
+*.xap
+*.appx
+*.appxbundle
+*.msix
+*.msixbundle
+
+## --- IDEs & Editors (Quan trọng cho Team) ---
+# Visual Studio
+.vs/
+_ReSharper*/
+
+# JetBrains Rider (Bạn dùng cái này trên Linux)
+.idea/
+*.sln.iml
+
+# VS Code / Cursor / Windsurf
+.vscode/
+.cursor/
+.windsurf/
+*.code-workspace
+
+## --- Linux / Zorin OS ---
+*~
+.DS_Store
+Thumbs.db
+
+## --- Project Specifics (Theo Roadmap của bạn) ---
+
+# 1. Logs:
+# Giữ lại thư mục 'logs/' nhưng không commit các file log bên trong
+logs/*
+!logs/.gitkeep
+
+# 2. User Configuration:
+# Nếu sau này có file config chứa mật khẩu hoặc đường dẫn riêng máy bạn
+appsettings.Development.json
+*.local.json
+
+## --- Test Results ---
+TestResults/
+*.trx
+coverage.json
+*.cobertura.xml
