@@ -36,8 +36,19 @@ public class TextFlowEngine
 
         if (availableWidth <= 0)
         {
-            var ex = new DocumentException("Available width must be positive");
+            var ex = new DocumentException(
+                $"Available width must be positive. Provided: {availableWidth}px",
+                "INVALID_WIDTH");
             _logger.Error(ex, "Invalid available width: {Width}", availableWidth);
+            throw ex;
+        }
+
+        if (measureTextWidth == null)
+        {
+            var ex = new DocumentException(
+                "Text measurement function cannot be null",
+                "NULL_MEASUREMENT_FUNCTION");
+            _logger.Error(ex, "measureTextWidth is null");
             throw ex;
         }
 
@@ -104,7 +115,7 @@ public class TextFlowEngine
         catch (Exception ex) when (ex is not DocumentException)
         {
             _logger.Error(ex, "Failed to calculate line breaks");
-            throw new DocumentException("Failed to calculate line breaks", ex);
+            throw new DocumentException("Failed to calculate line breaks", "LINE_BREAK_ERROR", ex);
         }
     }
 
@@ -125,7 +136,7 @@ public class TextFlowEngine
         catch (Exception ex)
         {
             _logger.Error(ex, "Failed to reflow text");
-            throw new DocumentException("Failed to reflow text", ex);
+            throw new DocumentException("Failed to reflow text", "REFLOW_ERROR", ex);
         }
     }
 
@@ -136,8 +147,11 @@ public class TextFlowEngine
     {
         if (lineHeight <= 0)
         {
-            _logger.Error("Invalid line height: {Height}", lineHeight);
-            throw new ArgumentException("Line height must be positive", nameof(lineHeight));
+            var ex = new DocumentException(
+                $"Line height must be positive. Provided: {lineHeight}px",
+                "INVALID_LINE_HEIGHT");
+            _logger.Error(ex, "Invalid line height: {Height}", lineHeight);
+            throw ex;
         }
 
         var lineCount = (int)(availableHeight / lineHeight);

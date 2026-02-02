@@ -1,3 +1,4 @@
+using MiniWord.Core.Exceptions;
 using Serilog;
 using System.ComponentModel;
 
@@ -142,16 +143,20 @@ public class A4Document : INotifyPropertyChanged
     {
         if (newMargins.TotalHorizontal >= A4_WIDTH_PX)
         {
-            _logger.Error("Invalid margins: Total horizontal margin {Total} exceeds page width {Width}",
+            var ex = new MarginException(
+                $"Total horizontal margin ({newMargins.TotalHorizontal:F1}px) exceeds page width ({A4_WIDTH_PX}px)");
+            _logger.Error(ex, "Invalid margins: Total horizontal margin {Total} exceeds page width {Width}",
                 newMargins.TotalHorizontal, A4_WIDTH_PX);
-            throw new ArgumentException("Total horizontal margins cannot exceed page width");
+            throw ex;
         }
 
         if (newMargins.TotalVertical >= A4_HEIGHT_PX)
         {
-            _logger.Error("Invalid margins: Total vertical margin {Total} exceeds page height {Height}",
+            var ex = new MarginException(
+                $"Total vertical margin ({newMargins.TotalVertical:F1}px) exceeds page height ({A4_HEIGHT_PX}px)");
+            _logger.Error(ex, "Invalid margins: Total vertical margin {Total} exceeds page height {Height}",
                 newMargins.TotalVertical, A4_HEIGHT_PX);
-            throw new ArgumentException("Total vertical margins cannot exceed page height");
+            throw ex;
         }
 
         var oldMargins = Margins;
