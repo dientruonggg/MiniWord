@@ -1,5 +1,5 @@
 using MiniWord.Core.Models;
-using MiniWord.Core.Logging;
+using MiniWord.Core.Services;
 
 namespace MiniWord.Core.Services;
 
@@ -22,7 +22,7 @@ public class DocumentManager
     public DocumentManager()
     {
         _document = new Document();
-        Logger.LogInfo("DocumentManager initialized with new document");
+        LoggerService.LogInfo("DocumentManager initialized with new document");
     }
 
     /// <summary>
@@ -31,7 +31,7 @@ public class DocumentManager
     public DocumentManager(Document document)
     {
         _document = document ?? throw new ArgumentNullException(nameof(document));
-        Logger.LogInfo("DocumentManager initialized with existing document");
+        LoggerService.LogInfo("DocumentManager initialized with existing document");
     }
 
     /// <summary>
@@ -42,11 +42,11 @@ public class DocumentManager
         try
         {
             _document = new Document { Title = title };
-            Logger.LogInfo($"New document created: {title}");
+            LoggerService.LogInfo($"New document created: {title}");
         }
         catch (Exception ex)
         {
-            Logger.LogException(ex, "CreateNewDocument");
+            LoggerService.LogException(ex, "CreateNewDocument");
             throw;
         }
     }
@@ -73,11 +73,11 @@ public class DocumentManager
             textRun.Text = text;
             paragraph.AddRun(textRun);
 
-            Logger.LogInfo($"Text inserted at paragraph {paragraphIndex}: {text.Length} characters");
+            LoggerService.LogInfo($"Text inserted at paragraph {paragraphIndex}: {text.Length} characters");
         }
         catch (Exception ex)
         {
-            Logger.LogException(ex, "InsertText");
+            LoggerService.LogException(ex, "InsertText");
             throw;
         }
     }
@@ -99,11 +99,11 @@ public class DocumentManager
             }
 
             _document.AddParagraph(paragraph);
-            Logger.LogInfo($"Paragraph appended: {text.Length} characters");
+            LoggerService.LogInfo($"Paragraph appended: {text.Length} characters");
         }
         catch (Exception ex)
         {
-            Logger.LogException(ex, "AppendParagraph");
+            LoggerService.LogException(ex, "AppendParagraph");
             throw;
         }
     }
@@ -125,11 +125,11 @@ public class DocumentManager
             }
 
             _document.InsertParagraph(index, paragraph);
-            Logger.LogInfo($"Paragraph inserted at index {index}");
+            LoggerService.LogInfo($"Paragraph inserted at index {index}");
         }
         catch (Exception ex)
         {
-            Logger.LogException(ex, "InsertParagraphAt");
+            LoggerService.LogException(ex, "InsertParagraphAt");
             throw;
         }
     }
@@ -142,11 +142,11 @@ public class DocumentManager
         try
         {
             _document.RemoveParagraph(index);
-            Logger.LogInfo($"Paragraph removed at index {index}");
+            LoggerService.LogInfo($"Paragraph removed at index {index}");
         }
         catch (Exception ex)
         {
-            Logger.LogException(ex, "RemoveParagraphAt");
+            LoggerService.LogException(ex, "RemoveParagraphAt");
             throw;
         }
     }
@@ -176,11 +176,11 @@ public class DocumentManager
             // Remove the second paragraph
             _document.RemoveParagraph(firstParagraphIndex + 1);
             
-            Logger.LogInfo($"Paragraphs merged at index {firstParagraphIndex}");
+            LoggerService.LogInfo($"Paragraphs merged at index {firstParagraphIndex}");
         }
         catch (Exception ex)
         {
-            Logger.LogException(ex, "MergeParagraphs");
+            LoggerService.LogException(ex, "MergeParagraphs");
             throw;
         }
     }
@@ -228,11 +228,11 @@ public class DocumentManager
             // Insert new paragraph after the original
             _document.InsertParagraph(paragraphIndex + 1, newParagraph);
             
-            Logger.LogInfo($"Paragraph split at index {paragraphIndex}, run {runIndex}");
+            LoggerService.LogInfo($"Paragraph split at index {paragraphIndex}, run {runIndex}");
         }
         catch (Exception ex)
         {
-            Logger.LogException(ex, "SplitParagraph");
+            LoggerService.LogException(ex, "SplitParagraph");
             throw;
         }
     }
@@ -245,11 +245,11 @@ public class DocumentManager
         try
         {
             _document.Clear();
-            Logger.LogInfo("Document cleared");
+            LoggerService.LogInfo("Document cleared");
         }
         catch (Exception ex)
         {
-            Logger.LogException(ex, "ClearDocument");
+            LoggerService.LogException(ex, "ClearDocument");
             throw;
         }
     }
