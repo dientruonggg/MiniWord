@@ -4,7 +4,10 @@ using Avalonia.Controls;
 using Avalonia.Controls.Shapes;
 using Avalonia.Media;
 using MiniWord.Core.Models;
+using MiniWord.Core.Services;
+using MiniWord.UI.Services;
 using Serilog;
+using System;
 using System.Collections.Generic;
 
 namespace MiniWord.UI.Controls;
@@ -20,7 +23,10 @@ public partial class A4Canvas : UserControl
     private ScrollViewer _scrollViewer = null!;
     private RichTextEditor _editorTextBox = null!;
     private Canvas _marginCanvas = null!;
+    private Canvas _renderCanvas = null!;
     private readonly List<Line> _marginLines = new();
+    private TextRenderer? _textRenderer;
+    private TextFlowEngine? _textFlowEngine;
     
     // A4 dimensions at 96 DPI
     private const double A4_WIDTH = 794;
@@ -35,6 +41,11 @@ public partial class A4Canvas : UserControl
     public A4Canvas()
     {
         _logger = Log.ForContext<A4Canvas>();
+        
+        // Initialize text rendering pipeline
+        _textRenderer = new TextRenderer(_logger, fontFamily: new FontFamily("Times New Roman"), fontSize: 12);
+        _textFlowEngine = new TextFlowEngine(_logger);
+        
         InitializeComponent();
     }
 
@@ -103,8 +114,16 @@ public partial class A4Canvas : UserControl
             Height = A4_HEIGHT
         };
 
-        // Add margin lines to the container
+        // Create canvas for text rendering (above margin lines, below editor)
+        _renderCanvas = new Canvas
+        {
+            Width = A4_WIDTH,
+            Height = A4_HEIGHT
+        };
+
+        // Add margin lines and render canvas to the container
         textBoxContainer.Children.Add(_marginCanvas);
+        textBoxContainer.Children.Add(_renderCanvas);
         
         // Position text box with margins
         Canvas.SetLeft(_editorTextBox, 96); // Left margin
@@ -297,4 +316,71 @@ public partial class A4Canvas : UserControl
             }
         }
     }
+
+    #region Text Rendering Pipeline
+
+    /// <summary>
+    /// Renders text using TextFlowEngine and TextRenderer
+    /// This demonstrates the P2.2 text rendering pipeline integration
+    /// </summary>
+    public void RenderTextWithPipeline(string text)
+    {
+        if (_textRenderer == null || _textFlowEngine == null)
+        {
+            _logger.Warning("Text rendering pipeline not initialized");
+            return;
+        }
+
+        _logger.Information("Rendering text with pipeline: {Length} characters", text?.Length ?? 0);
+
+        // Clear previous rendering
+        _renderCanvas.Children.Clear();
+
+        if (string.IsNullOrEmpty(text))
+        {
+            return;
+        }
+
+        try
+        {
+            // Calculate available width for text (paper width - margins)
+            var availableWidth = A4_WIDTH - _leftMargin - _rightMargin;
+
+            // Use TextFlowEngine to calculate line breaks with TextRenderer's measurement function
+            var measureFunc = _textRenderer.GetMeasurementFunction();
+            var textLines = _textFlowEngine.CalculateLineBreaks(text, availableWidth, measureFunc);
+
+            _logger.Information("Text flow calculated: {LineCount} lines", textLines.Count);
+
+            // Create a visual element to render the text
+            var textVisual = new TextRenderVisual(_textRenderer, textLines, _leftMargin, _topMargin);
+            
+            // Add to render canvas
+            _renderCanvas.Children.Add(textVisual);
+
+            _logger.Information("Text rendering complete");
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(ex, "Failed to render text with pipeline");
+        }
+    }
+
+    /// <summary>
+    /// Gets the current TextRenderer instance
+    /// </summary>
+    public TextRenderer? GetTextRenderer()
+    {
+        return _textRenderer;
+    }
+
+    /// <summary>
+    /// Gets the current TextFlowEngine instance
+    /// </summary>
+    public TextFlowEngine? GetTextFlowEngine()
+    {
+        return _textFlowEngine;
+    }
+
+    #endregion
 }
