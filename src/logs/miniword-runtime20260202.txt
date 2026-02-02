@@ -3,3 +3,24 @@
 System.InvalidOperationException: Test exception
 [2026-02-02 05:32:19 WRN] Test warning message
 [2026-02-02 05:32:19 ERR] Test error message
+[2026-02-02 05:34:16 INF] DocumentManager initialized with new document
+[2026-02-02 05:34:16 INF] Paragraph appended: 5 characters
+[2026-02-02 05:34:16 INF] Test info message
+[2026-02-02 05:34:16 INF] Paragraph appended: 6 characters
+[2026-02-02 05:34:16 INF] DocumentManager initialized with new document
+[2026-02-02 05:34:16 INF] Paragraph appended: 5 characters
+[2026-02-02 05:34:16 INF] Paragraph appended: 6 characters
+[2026-02-02 05:34:16 INF] Paragraph appended: 5 characters
+[2026-02-02 05:34:16 INF] Paragraph removed at index 1
+[2026-02-02 05:34:16 ERR] Exception occurred
+System.InvalidOperationException: Test exception
+[2026-02-02 05:34:16 INF] DocumentManager initialized with new document
+[2026-02-02 05:34:16 INF] Paragraph appended: 11 characters
+[2026-02-02 05:34:16 INF] Paragraph appended: 4 characters
+[2026-02-02 05:34:16 WRN] Test warning message
+[2026-02-02 05:34:16 INF] DocumentManager initialized with new document
+[2026-02-02 05:34:16 INF] Paragraph appended: 5 characters
+[2026-02-02 05:34:16 INF] Paragraph appended: 5 characters
+[2026-02-02 05:34:16 INF] DocumentManager initialized with existing document
+[2026-02-02 05:34:16 ERR] Test error message
+[2026-02-02 05:34:16 INF] DocumentManager initialized with new document
