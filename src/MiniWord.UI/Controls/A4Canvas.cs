@@ -382,7 +382,7 @@ public partial class A4Canvas : UserControl
     /// </summary>
     public void Copy()
     {
-        _editorTextBox?.CopyToClipboard();
+        _ = _editorTextBox?.CopyToClipboardAsync();
     }
 
     /// <summary>
@@ -390,7 +390,7 @@ public partial class A4Canvas : UserControl
     /// </summary>
     public void Cut()
     {
-        _editorTextBox?.CutToClipboard();
+        _ = _editorTextBox?.CutToClipboardAsync();
     }
 
     /// <summary>
@@ -398,7 +398,7 @@ public partial class A4Canvas : UserControl
     /// </summary>
     public void Paste()
     {
-        _editorTextBox?.PasteFromClipboard();
+        _ = _editorTextBox?.PasteFromClipboardAsync();
     }
 
     /// <summary>

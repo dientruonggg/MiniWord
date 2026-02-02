@@ -4,6 +4,7 @@ using Avalonia.Media;
 using Avalonia.Input;
 using Serilog;
 using System;
+using System.Threading.Tasks;
 using MiniWord.Core.Models;
 
 namespace MiniWord.UI.Controls;
@@ -50,6 +51,7 @@ public class RichTextEditor : TextBox
 
     /// <summary>
     /// Gets the current selection start position (maps to WinForms SelectionStart)
+    /// Hides base TextBox.SelectionStart to provide normalized selection (Start always <= End)
     /// </summary>
     public new int SelectionStart
     {
@@ -174,7 +176,7 @@ public class RichTextEditor : TextBox
     /// <summary>
     /// Copies selected text to clipboard
     /// </summary>
-    public async void CopyToClipboard()
+    public async Task CopyToClipboardAsync()
     {
         var selectedText = GetSelectedText();
         if (string.IsNullOrEmpty(selectedText))
@@ -205,7 +207,7 @@ public class RichTextEditor : TextBox
     /// <summary>
     /// Cuts selected text to clipboard
     /// </summary>
-    public async void CutToClipboard()
+    public async Task CutToClipboardAsync()
     {
         var selectedText = GetSelectedText();
         if (string.IsNullOrEmpty(selectedText))
@@ -246,14 +248,17 @@ public class RichTextEditor : TextBox
     /// <summary>
     /// Pastes text from clipboard at current cursor position
     /// </summary>
-    public async void PasteFromClipboard()
+    public async Task PasteFromClipboardAsync()
     {
         try
         {
             var clipboard = TopLevel.GetTopLevel(this)?.Clipboard;
             if (clipboard != null)
             {
-#pragma warning disable CS0618 // Using GetTextAsync for simplicity
+                // Note: GetTextAsync is deprecated in favor of ClipboardExtensions.TryGetTextAsync
+                // Using GetTextAsync here for simplicity as it provides direct nullable string result
+                // TODO: Consider migrating to TryGetTextAsync when refactoring clipboard operations
+#pragma warning disable CS0618
                 var clipboardText = await clipboard.GetTextAsync() ?? string.Empty;
 #pragma warning restore CS0618
                 if (!string.IsNullOrEmpty(clipboardText))
@@ -323,15 +328,15 @@ public class RichTextEditor : TextBox
             switch (e.Key)
             {
                 case Key.C:
-                    CopyToClipboard();
+                    _ = CopyToClipboardAsync();
                     e.Handled = true;
                     return;
                 case Key.X:
-                    CutToClipboard();
+                    _ = CutToClipboardAsync();
                     e.Handled = true;
                     return;
                 case Key.V:
-                    PasteFromClipboard();
+                    _ = PasteFromClipboardAsync();
                     e.Handled = true;
                     return;
                 case Key.A:
