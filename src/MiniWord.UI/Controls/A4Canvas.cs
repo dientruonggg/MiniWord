@@ -227,9 +227,60 @@ public partial class A4Canvas : UserControl
     /// </summary>
     private void OnCursorPositionChanged(object? sender, CursorPositionChangedEventArgs e)
     {
-        // TODO: Implement visual feedback when text approaches margins
-        // For now, just log the event
-        _logger.Debug("Cursor position changed to: {Position}", e.CaretIndex);
+        // Implement visual feedback when text approaches margins
+        // This provides a subtle indication to the user about margin proximity
+        
+        // Get the current text and calculate approximate position
+        var text = _editorTextBox.Text ?? string.Empty;
+        var caretIndex = e.CaretIndex;
+        
+        // Calculate line position (simplified - could be enhanced with actual text metrics)
+        var textBeforeCaret = caretIndex < text.Length ? text.Substring(0, caretIndex) : text;
+        var lastNewlineIndex = textBeforeCaret.LastIndexOf('\n');
+        var lineStartIndex = lastNewlineIndex >= 0 ? lastNewlineIndex + 1 : 0;
+        var currentLineLength = caretIndex - lineStartIndex;
+        
+        // Estimate horizontal position based on character count
+        // This is a simplified approach; real implementation would use font metrics
+        var estimatedCharWidth = _editorTextBox.FontSize * 0.6; // Rough estimate
+        var estimatedXPosition = currentLineLength * estimatedCharWidth;
+        
+        // Calculate proximity to margins
+        var textAreaWidth = _editorTextBox.Width;
+        var proximityThreshold = 50; // pixels from edge
+        
+        // Determine if near margins
+        var isNearLeftMargin = estimatedXPosition < proximityThreshold;
+        var isNearRightMargin = estimatedXPosition > (textAreaWidth - proximityThreshold);
+        
+        // Update margin line appearance based on proximity
+        if (isNearLeftMargin || isNearRightMargin)
+        {
+            // Highlight margins when text is nearby
+            var highlightBrush = new SolidColorBrush(Color.FromRgb(100, 150, 200)); // Light blue
+            
+            if (isNearLeftMargin && _marginLines.Count > 0)
+            {
+                _marginLines[0].Stroke = highlightBrush;
+            }
+            
+            if (isNearRightMargin && _marginLines.Count > 1)
+            {
+                _marginLines[1].Stroke = highlightBrush;
+            }
+            
+            _logger.Debug("Cursor near margin at position: {Position}, NearLeft: {NearLeft}, NearRight: {NearRight}",
+                e.CaretIndex, isNearLeftMargin, isNearRightMargin);
+        }
+        else
+        {
+            // Reset to default color when not near margins
+            var defaultBrush = new SolidColorBrush(Color.FromRgb(180, 180, 180));
+            foreach (var line in _marginLines)
+            {
+                line.Stroke = defaultBrush;
+            }
+        }
     }
 
     /// <summary>
