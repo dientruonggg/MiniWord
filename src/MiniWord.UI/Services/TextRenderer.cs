@@ -4,6 +4,7 @@ using MiniWord.Core.Models;
 using Serilog;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace MiniWord.UI.Services;
 
@@ -113,20 +114,112 @@ public class TextRenderer
             return;
         }
 
-        var formattedText = new FormattedText(
-            textLine.Content,
-            System.Globalization.CultureInfo.CurrentCulture,
-            FlowDirection.LeftToRight,
-            _typeface,
-            _fontSize,
-            foreground ?? Brushes.Black);
+        // Check if line has formatting spans (P5.3)
+        if (textLine.FormattingSpans != null && textLine.FormattingSpans.Count > 0)
+        {
+            RenderFormattedTextLine(context, textLine, x, y, foreground);
+        }
+        else
+        {
+            // Render plain text without formatting
+            var formattedText = new FormattedText(
+                textLine.Content,
+                System.Globalization.CultureInfo.CurrentCulture,
+                FlowDirection.LeftToRight,
+                _typeface,
+                _fontSize,
+                foreground ?? Brushes.Black);
 
-        // Draw text at baseline position
-        var origin = new Point(x, y);
-        context.DrawText(formattedText, origin);
+            // Draw text at baseline position
+            var origin = new Point(x, y);
+            context.DrawText(formattedText, origin);
 
-        _logger.Debug("Rendered line at position ({X}, {Y}), content length: {Length}", 
-            x, y, textLine.Content?.Length ?? 0);
+            _logger.Debug("Rendered plain line at position ({X}, {Y}), content length: {Length}", 
+                x, y, textLine.Content?.Length ?? 0);
+        }
+    }
+
+    /// <summary>
+    /// Renders a text line with formatting spans applied (P5.3)
+    /// </summary>
+    private void RenderFormattedTextLine(DrawingContext context, TextLine textLine, double x, double y, IBrush? foreground)
+    {
+        var content = textLine.Content;
+        var currentX = x;
+        var lastIndex = 0;
+
+        // Sort formatting spans by start index
+        var sortedSpans = textLine.FormattingSpans.OrderBy(s => s.StartIndex).ToList();
+
+        foreach (var span in sortedSpans)
+        {
+            // Render text before this span (if any)
+            if (span.StartIndex > lastIndex)
+            {
+                var plainText = content.Substring(lastIndex, span.StartIndex - lastIndex);
+                var plainFormattedText = new FormattedText(
+                    plainText,
+                    System.Globalization.CultureInfo.CurrentCulture,
+                    FlowDirection.LeftToRight,
+                    _typeface,
+                    _fontSize,
+                    foreground ?? Brushes.Black);
+
+                context.DrawText(plainFormattedText, new Point(currentX, y));
+                currentX += plainFormattedText.Width;
+            }
+
+            // Render formatted text span
+            var spanEndIndex = Math.Min(span.EndIndex, content.Length);
+            if (spanEndIndex > span.StartIndex)
+            {
+                var spanText = content.Substring(span.StartIndex, spanEndIndex - span.StartIndex);
+                
+                // Create typeface with formatting applied
+                var fontStyle = span.Formatting.HasFlag(TextFormatting.Italic) ? FontStyle.Italic : FontStyle.Normal;
+                var fontWeight = span.Formatting.HasFlag(TextFormatting.Bold) ? FontWeight.Bold : FontWeight.Normal;
+                var formattedTypeface = new Typeface(_typeface.FontFamily, fontStyle, fontWeight);
+
+                var formattedText = new FormattedText(
+                    spanText,
+                    System.Globalization.CultureInfo.CurrentCulture,
+                    FlowDirection.LeftToRight,
+                    formattedTypeface,
+                    _fontSize,
+                    foreground ?? Brushes.Black);
+
+                context.DrawText(formattedText, new Point(currentX, y));
+
+                // Draw underline if needed
+                if (span.Formatting.HasFlag(TextFormatting.Underline))
+                {
+                    var underlineY = y + formattedText.Baseline + 2; // Position underline below baseline
+                    var underlinePen = new Pen(foreground ?? Brushes.Black, 1.0);
+                    context.DrawLine(underlinePen, new Point(currentX, underlineY), new Point(currentX + formattedText.Width, underlineY));
+                }
+
+                currentX += formattedText.Width;
+                lastIndex = spanEndIndex;
+            }
+        }
+
+        // Render remaining text after last span (if any)
+        if (lastIndex < content.Length)
+        {
+            var remainingText = content.Substring(lastIndex);
+            var remainingFormattedText = new FormattedText(
+                remainingText,
+                System.Globalization.CultureInfo.CurrentCulture,
+                FlowDirection.LeftToRight,
+                _typeface,
+                _fontSize,
+                foreground ?? Brushes.Black);
+
+            context.DrawText(remainingFormattedText, new Point(currentX, y));
+        }
+
+        _logger.Debug("Rendered formatted line at position ({X}, {Y}), spans count: {Count}", 
+            x, y, sortedSpans.Count);
     }
 
     /// <summary>

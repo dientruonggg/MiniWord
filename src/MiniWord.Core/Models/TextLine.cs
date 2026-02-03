@@ -30,6 +30,11 @@ public class TextLine
     /// </summary>
     public bool IsHardBreak { get; set; }
 
+    /// <summary>
+    /// List of formatting spans applied to this line (P5.3)
+    /// </summary>
+    public List<FormattingSpan> FormattingSpans { get; set; } = new List<FormattingSpan>();
+
     public TextLine()
     {
     }
@@ -47,3 +52,4 @@ public class TextLine
         return $"Line[{StartIndex}]: \"{Content}\" ({Width:F1}px)";
     }
 }
+
