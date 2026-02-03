@@ -80,6 +80,14 @@ public partial class MainWindow : Window
         // Populate initial recent files menu (P4.3)
         PopulateRecentFilesMenu();
 
+        // Initialize document in A4Canvas (P5.3)
+        var canvas = this.FindControl<Controls.A4Canvas>("A4Canvas");
+        if (canvas != null)
+        {
+            canvas.SetDocument(_viewModel.Document);
+            _logger.Debug("Document initialized in A4Canvas");
+        }
+
         _logger.Information("MainWindow initialized successfully with MVVM pattern, validation support, file operations, and recent files tracking");
     }
 

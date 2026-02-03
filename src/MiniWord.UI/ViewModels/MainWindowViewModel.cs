@@ -56,6 +56,11 @@ public partial class MainWindowViewModel : ObservableObject, INotifyDataErrorInf
     private ObservableCollection<string> _recentFiles;
 
     /// <summary>
+    /// Gets the A4Document instance (P5.3)
+    /// </summary>
+    public A4Document Document => _document;
+
+    /// <summary>
     /// Window title that reflects the current file and dirty state
     /// </summary>
     public string WindowTitle
