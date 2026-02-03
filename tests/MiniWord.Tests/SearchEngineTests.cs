@@ -305,7 +305,7 @@ public class SearchEngineTests : IDisposable
         // Assert
         Assert.Equal(2, results.Count);
         Assert.Equal(new TextRange(7, 23), results[0]);
-        Assert.Equal(new TextRange(28, 43), results[1]); // user@domain.org is 15 chars (28 to 43)
+        Assert.Equal(new TextRange(28, 43), results[1]);
     }
 
     [Fact]
