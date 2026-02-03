@@ -5,6 +5,7 @@ using MiniWord.UI.ViewModels;
 using Serilog;
 using System;
 using System.ComponentModel;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -41,13 +42,19 @@ public partial class MainWindow : Window
         // Subscribe to validation errors (P3.3)
         _viewModel.ErrorsChanged += OnViewModelErrorsChanged;
 
+        // Subscribe to recent files collection changes (P4.3)
+        _viewModel.RecentFiles.CollectionChanged += OnRecentFilesCollectionChanged;
+
         // Wire up keyboard event handlers (view-specific behavior)
         this.KeyDown += MainWindow_KeyDown;
 
         // Wire up window closing event to check for unsaved changes
         this.Closing += MainWindow_Closing;
 
-        _logger.Information("MainWindow initialized successfully with MVVM pattern, validation support, and file operations");
+        // Populate initial recent files menu (P4.3)
+        PopulateRecentFilesMenu();
+
+        _logger.Information("MainWindow initialized successfully with MVVM pattern, validation support, file operations, and recent files tracking");
     }
 
     /// <summary>
@@ -408,6 +415,72 @@ public partial class MainWindow : Window
         {
             _logger.Error(ex, "Failed to show confirmation dialog");
             return false;
+        }
+    }
+
+    #endregion
+
+    #region Recent Files Menu (P4.3)
+
+    /// <summary>
+    /// Handles changes to the recent files collection - repopulates the menu
+    /// </summary>
+    private void OnRecentFilesCollectionChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+    {
+        _logger.Debug("Recent files collection changed");
+        PopulateRecentFilesMenu();
+    }
+
+    /// <summary>
+    /// Populates the "Open Recent" submenu with recent file entries
+    /// </summary>
+    private void PopulateRecentFilesMenu()
+    {
+        try
+        {
+            var openRecentMenuItem = this.FindControl<MenuItem>("OpenRecentMenuItem");
+            if (openRecentMenuItem == null)
+            {
+                _logger.Warning("OpenRecentMenuItem not found in XAML");
+                return;
+            }
+
+            // Clear existing items
+            openRecentMenuItem.Items.Clear();
+
+            // If no recent files, show "No recent files" disabled item
+            if (_viewModel.RecentFiles.Count == 0)
+            {
+                var noFilesItem = new MenuItem
+                {
+                    Header = "No recent files",
+                    IsEnabled = false
+                };
+                openRecentMenuItem.Items.Add(noFilesItem);
+                _logger.Debug("No recent files to display");
+                return;
+            }
+
+            // Add menu item for each recent file
+            foreach (var filePath in _viewModel.RecentFiles)
+            {
+                var fileName = Path.GetFileName(filePath);
+                var menuItem = new MenuItem
+                {
+                    Header = fileName,
+                    Command = _viewModel.OpenRecentFileCommand,
+                    CommandParameter = filePath
+                };
+                // Set tooltip using attached property
+                ToolTip.SetTip(menuItem, filePath);
+                openRecentMenuItem.Items.Add(menuItem);
+            }
+
+            _logger.Information("Populated recent files menu with {Count} items", _viewModel.RecentFiles.Count);
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(ex, "Failed to populate recent files menu");
         }
     }
 
