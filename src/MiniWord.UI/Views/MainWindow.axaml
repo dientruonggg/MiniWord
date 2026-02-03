@@ -112,13 +112,13 @@
                             ToolTip.Tip="Italic (Ctrl+I)"/>
                     
                     <Button x:Name="UnderlineButton"
-                            Content="U" 
-                            TextDecorations="Underline"
                             Background="White"
                             Foreground="{StaticResource DarkBlueBrush}"
                             Padding="10,5"
                             Width="35"
-                            ToolTip.Tip="Underline (Ctrl+U)"/>
+                            ToolTip.Tip="Underline (Ctrl+U)">
+                        <TextBlock Text="U" TextDecorations="Underline"/>
+                    </Button>
                 </StackPanel>
                 
             </StackPanel>

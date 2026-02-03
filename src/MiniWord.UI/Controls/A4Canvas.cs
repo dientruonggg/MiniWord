@@ -9,6 +9,7 @@ using MiniWord.UI.Services;
 using Serilog;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace MiniWord.UI.Controls;
@@ -432,6 +433,212 @@ public partial class A4Canvas : UserControl
     /// Gets the current caret position
     /// </summary>
     public int CaretPosition => _editorTextBox?.CaretIndex ?? 0;
+
+    #endregion
+
+    #region Text Formatting (P5.3)
+
+    /// <summary>
+    /// Applies or removes formatting to the currently selected text
+    /// </summary>
+    /// <param name="formatting">The formatting to apply</param>
+    /// <param name="add">True to add formatting, false to remove it</param>
+    public void ApplyFormatting(TextFormatting formatting, bool add = true)
+    {
+        if (_document == null)
+        {
+            _logger.Warning("Cannot apply formatting: document not initialized");
+            return;
+        }
+
+        var selectionStart = SelectionStart;
+        var selectionLength = SelectionLength;
+
+        if (selectionLength == 0)
+        {
+            _logger.Debug("No text selected, formatting not applied");
+            return;
+        }
+
+        _logger.Information("Applying formatting {Formatting} to range [{Start}, {End}), add={Add}",
+            formatting, selectionStart, selectionStart + selectionLength, add);
+
+        try
+        {
+            if (add)
+            {
+                // Add new formatting span
+                var newSpan = new FormattingSpan(selectionStart, selectionLength, formatting);
+                
+                // Merge with existing spans or add as new
+                MergeFormattingSpan(newSpan);
+            }
+            else
+            {
+                // Remove formatting from the selected range
+                RemoveFormattingFromRange(selectionStart, selectionLength, formatting);
+            }
+
+            // Trigger re-render
+            RefreshTextRendering();
+
+            _logger.Information("Formatting applied successfully");
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(ex, "Failed to apply formatting");
+        }
+    }
+
+    /// <summary>
+    /// Toggles bold formatting on the selected text
+    /// </summary>
+    public void ToggleBold()
+    {
+        var hasBold = HasFormatting(TextFormatting.Bold);
+        ApplyFormatting(TextFormatting.Bold, !hasBold);
+    }
+
+    /// <summary>
+    /// Toggles italic formatting on the selected text
+    /// </summary>
+    public void ToggleItalic()
+    {
+        var hasItalic = HasFormatting(TextFormatting.Italic);
+        ApplyFormatting(TextFormatting.Italic, !hasItalic);
+    }
+
+    /// <summary>
+    /// Toggles underline formatting on the selected text
+    /// </summary>
+    public void ToggleUnderline()
+    {
+        var hasUnderline = HasFormatting(TextFormatting.Underline);
+        ApplyFormatting(TextFormatting.Underline, !hasUnderline);
+    }
+
+    /// <summary>
+    /// Checks if the current selection has the specified formatting
+    /// </summary>
+    /// <param name="formatting">The formatting to check</param>
+    /// <returns>True if all selected text has this formatting</returns>
+    public bool HasFormatting(TextFormatting formatting)
+    {
+        if (_document == null || SelectionLength == 0)
+        {
+            return false;
+        }
+
+        var selectionStart = SelectionStart;
+        var selectionEnd = selectionStart + SelectionLength;
+
+        // Check if any span in the selection has this formatting
+        foreach (var span in _document.FormattingSpans)
+        {
+            if (span.StartIndex < selectionEnd && span.EndIndex > selectionStart)
+            {
+                if (span.Formatting.HasFlag(formatting))
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Merges a new formatting span with existing spans
+    /// </summary>
+    private void MergeFormattingSpan(FormattingSpan newSpan)
+    {
+        if (_document == null) return;
+
+        // Find overlapping spans with same formatting
+        var overlappingSpans = _document.FormattingSpans
+            .Where(s => s.OverlapsWith(newSpan) && s.Formatting == newSpan.Formatting)
+            .ToList();
+
+        if (overlappingSpans.Count == 0)
+        {
+            // No overlap, just add the new span
+            _document.FormattingSpans.Add(newSpan);
+        }
+        else
+        {
+            // Merge overlapping spans
+            var minStart = Math.Min(newSpan.StartIndex, overlappingSpans.Min(s => s.StartIndex));
+            var maxEnd = Math.Max(newSpan.EndIndex, overlappingSpans.Max(s => s.EndIndex));
+
+            // Remove old spans
+            foreach (var span in overlappingSpans)
+            {
+                _document.FormattingSpans.Remove(span);
+            }
+
+            // Add merged span
+            _document.FormattingSpans.Add(new FormattingSpan(minStart, maxEnd - minStart, newSpan.Formatting));
+        }
+
+        _logger.Debug("Formatting span merged: {Span}", newSpan);
+    }
+
+    /// <summary>
+    /// Removes formatting from a specific range
+    /// </summary>
+    private void RemoveFormattingFromRange(int start, int length, TextFormatting formatting)
+    {
+        if (_document == null) return;
+
+        var end = start + length;
+        var spansToModify = _document.FormattingSpans
+            .Where(s => s.StartIndex < end && s.EndIndex > start && s.Formatting.HasFlag(formatting))
+            .ToList();
+
+        foreach (var span in spansToModify)
+        {
+            _document.FormattingSpans.Remove(span);
+
+            // Remove the specific formatting flag
+            var newFormatting = span.Formatting & ~formatting;
+
+            // Split span if needed
+            if (span.StartIndex < start)
+            {
+                // Keep the part before the selection
+                _document.FormattingSpans.Add(new FormattingSpan(span.StartIndex, start - span.StartIndex, span.Formatting));
+            }
+
+            if (span.EndIndex > end)
+            {
+                // Keep the part after the selection
+                _document.FormattingSpans.Add(new FormattingSpan(end, span.EndIndex - end, span.Formatting));
+            }
+
+            // Add the middle part with updated formatting (if it still has formatting)
+            if (newFormatting != TextFormatting.None)
+            {
+                var middleStart = Math.Max(span.StartIndex, start);
+                var middleEnd = Math.Min(span.EndIndex, end);
+                _document.FormattingSpans.Add(new FormattingSpan(middleStart, middleEnd - middleStart, newFormatting));
+            }
+        }
+
+        _logger.Debug("Formatting removed from range [{Start}, {End})", start, end);
+    }
+
+    /// <summary>
+    /// Refreshes the text rendering with current formatting
+    /// </summary>
+    private void RefreshTextRendering()
+    {
+        // Re-render the text with updated formatting
+        var text = Text;
+        if (!string.IsNullOrEmpty(text))
+        {
+            RenderTextWithPipeline(text);
+        }
+    }
 
     #endregion
 
