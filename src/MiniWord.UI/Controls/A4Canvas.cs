@@ -26,10 +26,15 @@ public partial class A4Canvas : UserControl
     private RichTextEditor _editorTextBox = null!;
     private Canvas _marginCanvas = null!;
     private Canvas _renderCanvas = null!;
+    private Canvas _highlightCanvas = null!;
     private readonly List<Line> _marginLines = new();
     private TextRenderer? _textRenderer;
     private TextFlowEngine? _textFlowEngine;
     private A4Document? _document;
+    
+    // Search result highlighting (P5.2)
+    private readonly List<Rectangle> _highlightRectangles = new();
+    private TextRange? _currentHighlight;
     
     // Virtual rendering cache
     private readonly Dictionary<int, Control> _pageRenderCache = new();
@@ -132,9 +137,17 @@ public partial class A4Canvas : UserControl
             Height = A4_HEIGHT
         };
 
-        // Add margin lines and render canvas to the container
+        // Create canvas for search result highlighting (P5.2) - above text, below editor
+        _highlightCanvas = new Canvas
+        {
+            Width = A4_WIDTH,
+            Height = A4_HEIGHT
+        };
+
+        // Add margin lines, render canvas, and highlight canvas to the container
         textBoxContainer.Children.Add(_marginCanvas);
         textBoxContainer.Children.Add(_renderCanvas);
+        textBoxContainer.Children.Add(_highlightCanvas);
         
         // Position text box with margins
         Canvas.SetLeft(_editorTextBox, 96); // Left margin
@@ -778,6 +791,207 @@ public partial class A4Canvas : UserControl
         var pageIndex = (int)((scrollOffset - 50) / (A4_HEIGHT + PAGE_SPACING));
         
         return Math.Max(0, Math.Min(pageIndex, _document.PageCount - 1));
+    }
+
+    #endregion
+
+    #region Search Result Highlighting (P5.2)
+
+    /// <summary>
+    /// Highlights a text range in the editor
+    /// </summary>
+    /// <param name="range">The text range to highlight</param>
+    public void HighlightSearchResult(TextRange range)
+    {
+        try
+        {
+            if (range == null || range.IsEmpty)
+            {
+                _logger.Warning("Cannot highlight empty or null range");
+                return;
+            }
+
+            _logger.Information("Highlighting search result: {Range}", range);
+
+            // Clear previous highlights
+            ClearSearchHighlights();
+
+            // Store current highlight
+            _currentHighlight = range;
+
+            // Set selection in the editor to the matched text
+            _editorTextBox.SetSelection(range.Start, range.Length);
+
+            // Calculate approximate position for visual highlight
+            // This is a simplified implementation - could be enhanced with actual text metrics
+            var text = _editorTextBox.Text ?? string.Empty;
+            var textBeforeMatch = range.Start < text.Length ? text.Substring(0, range.Start) : text;
+            
+            // Count lines before the match
+            var linesBefore = textBeforeMatch.Split('\n').Length - 1;
+            
+            // Estimate Y position (line height * line number)
+            var estimatedLineHeight = _editorTextBox.FontSize * 1.5;
+            var yPosition = linesBefore * estimatedLineHeight;
+
+            // Get the text on the current line to estimate X position
+            var lastNewlineIndex = textBeforeMatch.LastIndexOf('\n');
+            var lineStartIndex = lastNewlineIndex >= 0 ? lastNewlineIndex + 1 : 0;
+            var charsBeforeMatchOnLine = range.Start - lineStartIndex;
+            
+            // Estimate X position
+            var estimatedCharWidth = _editorTextBox.FontSize * 0.6;
+            var xPosition = charsBeforeMatchOnLine * estimatedCharWidth;
+
+            // Calculate highlight width
+            var matchText = range.End <= text.Length ? text.Substring(range.Start, range.Length) : string.Empty;
+            var highlightWidth = matchText.Length * estimatedCharWidth;
+
+            // Create highlight rectangle with semi-transparent yellow background
+            var highlightRect = new Rectangle
+            {
+                Width = highlightWidth,
+                Height = estimatedLineHeight,
+                Fill = new SolidColorBrush(Color.FromArgb(100, 255, 255, 0)), // Semi-transparent yellow
+                Stroke = new SolidColorBrush(Color.FromRgb(255, 200, 0)),
+                StrokeThickness = 1
+            };
+
+            // Position the highlight rectangle
+            Canvas.SetLeft(highlightRect, _leftMargin + xPosition);
+            Canvas.SetTop(highlightRect, _topMargin + yPosition);
+
+            // Add to highlight canvas
+            _highlightCanvas.Children.Add(highlightRect);
+            _highlightRectangles.Add(highlightRect);
+
+            _logger.Debug("Search highlight added at position ({X}, {Y}) with width {Width}", 
+                xPosition, yPosition, highlightWidth);
+
+            // Scroll to make the highlight visible
+            ScrollToHighlight(yPosition);
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(ex, "Failed to highlight search result");
+        }
+    }
+
+    /// <summary>
+    /// Highlights multiple search results
+    /// </summary>
+    /// <param name="ranges">The text ranges to highlight</param>
+    public void HighlightSearchResults(List<TextRange> ranges)
+    {
+        try
+        {
+            if (ranges == null || ranges.Count == 0)
+            {
+                _logger.Debug("No ranges to highlight");
+                return;
+            }
+
+            _logger.Information("Highlighting {Count} search results", ranges.Count);
+
+            // Clear previous highlights
+            ClearSearchHighlights();
+
+            var text = _editorTextBox.Text ?? string.Empty;
+            var estimatedLineHeight = _editorTextBox.FontSize * 1.5;
+            var estimatedCharWidth = _editorTextBox.FontSize * 0.6;
+
+            foreach (var range in ranges)
+            {
+                if (range.IsEmpty) continue;
+
+                // Calculate position for each highlight
+                var textBeforeMatch = range.Start < text.Length ? text.Substring(0, range.Start) : text;
+                var linesBefore = textBeforeMatch.Split('\n').Length - 1;
+                var yPosition = linesBefore * estimatedLineHeight;
+
+                var lastNewlineIndex = textBeforeMatch.LastIndexOf('\n');
+                var lineStartIndex = lastNewlineIndex >= 0 ? lastNewlineIndex + 1 : 0;
+                var charsBeforeMatchOnLine = range.Start - lineStartIndex;
+                var xPosition = charsBeforeMatchOnLine * estimatedCharWidth;
+
+                var matchText = range.End <= text.Length ? text.Substring(range.Start, range.Length) : string.Empty;
+                var highlightWidth = matchText.Length * estimatedCharWidth;
+
+                // Create highlight rectangle
+                var highlightRect = new Rectangle
+                {
+                    Width = highlightWidth,
+                    Height = estimatedLineHeight,
+                    Fill = new SolidColorBrush(Color.FromArgb(80, 255, 255, 0)), // Lighter yellow for multiple highlights
+                    Stroke = new SolidColorBrush(Color.FromRgb(255, 200, 0)),
+                    StrokeThickness = 0.5
+                };
+
+                Canvas.SetLeft(highlightRect, _leftMargin + xPosition);
+                Canvas.SetTop(highlightRect, _topMargin + yPosition);
+
+                _highlightCanvas.Children.Add(highlightRect);
+                _highlightRectangles.Add(highlightRect);
+            }
+
+            _logger.Debug("Added {Count} search highlights", _highlightRectangles.Count);
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(ex, "Failed to highlight search results");
+        }
+    }
+
+    /// <summary>
+    /// Clears all search result highlights
+    /// </summary>
+    public void ClearSearchHighlights()
+    {
+        try
+        {
+            _logger.Debug("Clearing {Count} search highlights", _highlightRectangles.Count);
+
+            foreach (var rect in _highlightRectangles)
+            {
+                _highlightCanvas.Children.Remove(rect);
+            }
+
+            _highlightRectangles.Clear();
+            _currentHighlight = null;
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(ex, "Failed to clear search highlights");
+        }
+    }
+
+    /// <summary>
+    /// Scrolls to make a highlight visible
+    /// </summary>
+    private void ScrollToHighlight(double yPosition)
+    {
+        try
+        {
+            var targetOffset = _topMargin + yPosition - (_scrollViewer.Viewport.Height / 2);
+            targetOffset = Math.Max(0, targetOffset);
+
+            _logger.Debug("Scrolling to highlight at Y position {Y}, target offset {Offset}", 
+                yPosition, targetOffset);
+
+            _scrollViewer.Offset = new Vector(_scrollViewer.Offset.X, targetOffset);
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(ex, "Failed to scroll to highlight");
+        }
+    }
+
+    /// <summary>
+    /// Gets the current highlight range
+    /// </summary>
+    public TextRange? GetCurrentHighlight()
+    {
+        return _currentHighlight;
     }
 
     #endregion
