@@ -20,6 +20,13 @@ public partial class MainWindow : Window
     private readonly ILogger _logger;
     private readonly MainWindowViewModel _viewModel;
 
+    // P5.4: Shared font family list to prevent duplication
+    private static readonly string[] AvailableFonts = new[]
+    {
+        "Arial", "Times New Roman", "Courier New", "Verdana", "Georgia",
+        "Calibri", "Segoe UI", "Tahoma", "Trebuchet MS", "Comic Sans MS"
+    };
+
     public MainWindow()
     {
         _logger = Log.ForContext<MainWindow>();
@@ -75,6 +82,13 @@ public partial class MainWindow : Window
         var fontFamilyComboBox = this.FindControl<ComboBox>("FontFamilyComboBox");
         if (fontFamilyComboBox != null)
         {
+            // Populate ComboBox with available fonts
+            fontFamilyComboBox.Items.Clear();
+            foreach (var font in AvailableFonts)
+            {
+                fontFamilyComboBox.Items.Add(font);
+            }
+            
             fontFamilyComboBox.SelectionChanged += OnFontFamilyChanged;
             // Set initial selection based on ViewModel
             fontFamilyComboBox.SelectedIndex = GetFontFamilyIndex(_viewModel.FontFamily);
@@ -763,12 +777,9 @@ public partial class MainWindow : Window
     /// </summary>
     private int GetFontFamilyIndex(string fontFamily)
     {
-        var fonts = new[] { "Arial", "Times New Roman", "Courier New", "Verdana", "Georgia", 
-                           "Calibri", "Segoe UI", "Tahoma", "Trebuchet MS", "Comic Sans MS" };
-        
-        for (int i = 0; i < fonts.Length; i++)
+        for (int i = 0; i < AvailableFonts.Length; i++)
         {
-            if (fonts[i].Equals(fontFamily, StringComparison.OrdinalIgnoreCase))
+            if (AvailableFonts[i].Equals(fontFamily, StringComparison.OrdinalIgnoreCase))
                 return i;
         }
         
@@ -786,11 +797,8 @@ public partial class MainWindow : Window
             if (comboBox == null || comboBox.SelectedItem == null)
                 return;
 
-            var selectedItem = comboBox.SelectedItem as ComboBoxItem;
-            if (selectedItem == null)
-                return;
-
-            var fontFamily = selectedItem.Content?.ToString() ?? "Arial";
+            // Now items are strings, not ComboBoxItems
+            var fontFamily = comboBox.SelectedItem.ToString() ?? "Arial";
             
             _logger.Information("Font family changed to: {FontFamily}", fontFamily);
             _viewModel.FontFamily = fontFamily;
