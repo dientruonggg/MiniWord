@@ -45,6 +45,13 @@ public partial class MainWindow : Window
         // Subscribe to recent files collection changes (P4.3)
         _viewModel.RecentFiles.CollectionChanged += OnRecentFilesCollectionChanged;
 
+        // Wire up Find/Replace menu item (P5.2)
+        var findReplaceMenuItem = this.FindControl<MenuItem>("FindReplaceMenuItem");
+        if (findReplaceMenuItem != null)
+        {
+            findReplaceMenuItem.Click += (s, e) => ShowFindReplaceDialog();
+        }
+
         // Wire up keyboard event handlers (view-specific behavior)
         this.KeyDown += MainWindow_KeyDown;
 
@@ -191,6 +198,15 @@ public partial class MainWindow : Window
         {
             _logger.Information("Ctrl+S pressed - executing Save command");
             _ = _viewModel.SaveAsync();
+            e.Handled = true;
+            return;
+        }
+
+        // Ctrl+F for Find/Replace dialog (P5.2)
+        if (e.KeyModifiers == Avalonia.Input.KeyModifiers.Control && e.Key == Avalonia.Input.Key.F)
+        {
+            _logger.Information("Ctrl+F pressed - opening Find/Replace dialog");
+            ShowFindReplaceDialog();
             e.Handled = true;
             return;
         }
@@ -481,6 +497,118 @@ public partial class MainWindow : Window
         catch (Exception ex)
         {
             _logger.Error(ex, "Failed to populate recent files menu");
+        }
+    }
+
+    #endregion
+
+    #region Find/Replace Dialog (P5.2)
+
+    /// <summary>
+    /// Shows the Find/Replace dialog
+    /// </summary>
+    private void ShowFindReplaceDialog()
+    {
+        try
+        {
+            _logger.Information("Opening Find/Replace dialog");
+
+            var canvas = this.FindControl<Controls.A4Canvas>("A4Canvas");
+            if (canvas == null)
+            {
+                _logger.Warning("A4Canvas not found - cannot open Find/Replace dialog");
+                return;
+            }
+
+            var findReplaceWindow = new FindReplaceWindow();
+            
+            // Wire up delegates
+            findReplaceWindow.GetDocumentText = () => canvas.Text;
+            findReplaceWindow.HighlightTextRange = (range) =>
+            {
+                _logger.Debug("Highlighting text range: {Range}", range);
+                canvas.HighlightSearchResult(range);
+            };
+            findReplaceWindow.ReplaceText = (searchText, replaceText, replaceAll) =>
+            {
+                HandleReplaceText(canvas, searchText, replaceText, replaceAll, findReplaceWindow);
+            };
+
+            // Show dialog as modal
+            _ = findReplaceWindow.ShowDialog(this);
+
+            _logger.Information("Find/Replace dialog opened successfully");
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(ex, "Failed to open Find/Replace dialog");
+        }
+    }
+
+    /// <summary>
+    /// Handles text replacement from Find/Replace dialog
+    /// </summary>
+    private void HandleReplaceText(Controls.A4Canvas canvas, string searchText, string replaceText, 
+        bool replaceAll, FindReplaceWindow findReplaceWindow)
+    {
+        try
+        {
+            _logger.Information("Handling replace: searchText='{SearchText}', replaceText='{ReplaceText}', replaceAll={ReplaceAll}",
+                searchText, replaceText, replaceAll);
+
+            var documentText = canvas.Text;
+            var searchEngine = new MiniWord.Core.Services.SearchEngine(_logger);
+            var options = new MiniWord.Core.Services.SearchOptions
+            {
+                CaseSensitive = findReplaceWindow.GetViewModel().CaseSensitive,
+                WholeWord = findReplaceWindow.GetViewModel().WholeWord,
+                UseRegex = findReplaceWindow.GetViewModel().UseRegex
+            };
+
+            if (replaceAll)
+            {
+                // Replace all occurrences
+                var (newText, replacedRanges) = searchEngine.ReplaceAll(documentText, searchText, replaceText, options);
+                
+                if (replacedRanges.Count > 0)
+                {
+                    canvas.Text = newText;
+                    _viewModel.DocumentText = newText;
+                    
+                    _logger.Information("Replaced {Count} occurrences", replacedRanges.Count);
+                    
+                    // Refresh search results
+                    findReplaceWindow.PerformSearch();
+                }
+                else
+                {
+                    _logger.Information("No occurrences to replace");
+                }
+            }
+            else
+            {
+                // Replace first occurrence
+                var (newText, replacedRange) = searchEngine.ReplaceFirst(documentText, searchText, replaceText, options);
+                
+                if (replacedRange != null)
+                {
+                    canvas.Text = newText;
+                    _viewModel.DocumentText = newText;
+                    
+                    _logger.Information("Replaced single occurrence at position {Start}", replacedRange.Start);
+                    
+                    // Refresh search results and find next
+                    findReplaceWindow.PerformSearch();
+                }
+                else
+                {
+                    _logger.Information("No occurrence to replace");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(ex, "Failed to replace text");
         }
     }
 

@@ -35,6 +35,9 @@
                 <Separator/>
                 <MenuItem Header="E_xit" Command="{Binding ExitInternalCommand}"/>
             </MenuItem>
+            <MenuItem Header="_Edit">
+                <MenuItem Header="_Find/Replace..." Name="FindReplaceMenuItem" HotKey="Ctrl+F"/>
+            </MenuItem>
         </Menu>
         
         <!-- Toolbar -->

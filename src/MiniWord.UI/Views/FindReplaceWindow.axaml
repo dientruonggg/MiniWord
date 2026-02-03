@@ -1,0 +1,122 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:vm="clr-namespace:MiniWord.UI.ViewModels"
+        mc:Ignorable="d" d:DesignWidth="500" d:DesignHeight="280"
+        x:Class="MiniWord.UI.Views.FindReplaceWindow"
+        x:DataType="vm:FindReplaceViewModel"
+        Title="Find and Replace"
+        Width="500" Height="280"
+        CanResize="False"
+        WindowStartupLocation="CenterOwner"
+        Background="#F5F5F5">
+
+    <Window.Resources>
+        <!-- Blue Theme Colors -->
+        <SolidColorBrush x:Key="PrimaryBlueBrush" Color="#2196F3"/>
+        <SolidColorBrush x:Key="DarkBlueBrush" Color="#1976D2"/>
+        <SolidColorBrush x:Key="LightBlueBrush" Color="#BBDEFB"/>
+    </Window.Resources>
+
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Search Text -->
+        <StackPanel Grid.Row="0" Margin="0,0,0,10">
+            <TextBlock Text="Find what:" FontWeight="SemiBold" Margin="0,0,0,5"/>
+            <TextBox x:Name="SearchTextBox"
+                     Text="{Binding SearchText, Mode=TwoWay}"
+                     Watermark="Enter text to find..."
+                     Padding="8"
+                     FontSize="14"/>
+        </StackPanel>
+
+        <!-- Replace Text -->
+        <StackPanel Grid.Row="1" Margin="0,0,0,10">
+            <TextBlock Text="Replace with:" FontWeight="SemiBold" Margin="0,0,0,5"/>
+            <TextBox Text="{Binding ReplaceText, Mode=TwoWay}"
+                     Watermark="Enter replacement text..."
+                     Padding="8"
+                     FontSize="14"/>
+        </StackPanel>
+
+        <!-- Options -->
+        <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="15" Margin="0,0,0,15">
+            <CheckBox Content="Match case" 
+                     IsChecked="{Binding CaseSensitive, Mode=TwoWay}"/>
+            <CheckBox Content="Whole word" 
+                     IsChecked="{Binding WholeWord, Mode=TwoWay}"/>
+            <CheckBox Content="Use regex" 
+                     IsChecked="{Binding UseRegex, Mode=TwoWay}"/>
+        </StackPanel>
+
+        <!-- Buttons -->
+        <Grid Grid.Row="3" Margin="0,0,0,15">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Navigation Buttons -->
+            <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="10">
+                <Button Content="◄ Previous" 
+                        Command="{Binding FindPreviousCommand}"
+                        Width="100"
+                        Padding="8,5"
+                        Background="{StaticResource LightBlueBrush}"/>
+                <Button Content="Next ►" 
+                        Command="{Binding FindNextCommand}"
+                        Width="100"
+                        Padding="8,5"
+                        Background="{StaticResource LightBlueBrush}"/>
+            </StackPanel>
+
+            <!-- Replace Buttons -->
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10">
+                <Button Content="Replace" 
+                        Command="{Binding ReplaceCommand}"
+                        Width="100"
+                        Padding="8,5"
+                        Background="{StaticResource PrimaryBlueBrush}"
+                        Foreground="White"/>
+                <Button Content="Replace All" 
+                        Command="{Binding ReplaceAllCommand}"
+                        Width="100"
+                        Padding="8,5"
+                        Background="{StaticResource DarkBlueBrush}"
+                        Foreground="White"/>
+            </StackPanel>
+        </Grid>
+
+        <!-- Status Bar -->
+        <Border Grid.Row="4" 
+                Background="White" 
+                BorderBrush="#CCCCCC" 
+                BorderThickness="1"
+                CornerRadius="3"
+                Padding="10"
+                VerticalAlignment="Top">
+            <TextBlock Text="{Binding StatusText}" 
+                      FontSize="12"
+                      TextWrapping="Wrap"/>
+        </Border>
+
+        <!-- Close Button -->
+        <Button Grid.Row="5" 
+                Content="Close" 
+                Width="100"
+                Padding="8,5"
+                HorizontalAlignment="Right"
+                Margin="0,15,0,0"
+                Click="CloseButton_Click"/>
+    </Grid>
+
+</Window>
