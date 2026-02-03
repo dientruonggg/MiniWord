@@ -20,6 +20,13 @@ public partial class MainWindow : Window
     private readonly ILogger _logger;
     private readonly MainWindowViewModel _viewModel;
 
+    // P5.4: Shared font family list to prevent duplication
+    private static readonly string[] AvailableFonts = new[]
+    {
+        "Arial", "Times New Roman", "Courier New", "Verdana", "Georgia",
+        "Calibri", "Segoe UI", "Tahoma", "Trebuchet MS", "Comic Sans MS"
+    };
+
     public MainWindow()
     {
         _logger = Log.ForContext<MainWindow>();
@@ -69,6 +76,28 @@ public partial class MainWindow : Window
         if (underlineButton != null)
         {
             underlineButton.Click += (s, e) => ApplyUnderlineFormatting();
+        }
+
+        // Wire up font controls (P5.4)
+        var fontFamilyComboBox = this.FindControl<ComboBox>("FontFamilyComboBox");
+        if (fontFamilyComboBox != null)
+        {
+            // Populate ComboBox with available fonts
+            fontFamilyComboBox.Items.Clear();
+            foreach (var font in AvailableFonts)
+            {
+                fontFamilyComboBox.Items.Add(font);
+            }
+            
+            fontFamilyComboBox.SelectionChanged += OnFontFamilyChanged;
+            // Set initial selection based on ViewModel
+            fontFamilyComboBox.SelectedIndex = GetFontFamilyIndex(_viewModel.FontFamily);
+        }
+
+        var fontSizeNumeric = this.FindControl<NumericUpDown>("FontSizeNumeric");
+        if (fontSizeNumeric != null)
+        {
+            fontSizeNumeric.ValueChanged += OnFontSizeChanged;
         }
 
         // Wire up keyboard event handlers (view-specific behavior)
@@ -736,6 +765,92 @@ public partial class MainWindow : Window
         catch (Exception ex)
         {
             _logger.Error(ex, "Failed to apply underline formatting");
+        }
+    }
+
+    #endregion
+
+    #region Font Selection (P5.4)
+
+    /// <summary>
+    /// Gets the index of a font family in the ComboBox
+    /// </summary>
+    private int GetFontFamilyIndex(string fontFamily)
+    {
+        for (int i = 0; i < AvailableFonts.Length; i++)
+        {
+            if (AvailableFonts[i].Equals(fontFamily, StringComparison.OrdinalIgnoreCase))
+                return i;
+        }
+        
+        return 0; // Default to Arial
+    }
+
+    /// <summary>
+    /// Handles font family selection changes
+    /// </summary>
+    private void OnFontFamilyChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        try
+        {
+            var comboBox = sender as ComboBox;
+            if (comboBox == null || comboBox.SelectedItem == null)
+                return;
+
+            // Now items are strings, not ComboBoxItems
+            var fontFamily = comboBox.SelectedItem.ToString() ?? "Arial";
+            
+            _logger.Information("Font family changed to: {FontFamily}", fontFamily);
+            _viewModel.FontFamily = fontFamily;
+
+            // Update TextRenderer in A4Canvas
+            UpdateCanvasFont();
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(ex, "Failed to handle font family change");
+        }
+    }
+
+    /// <summary>
+    /// Handles font size changes
+    /// </summary>
+    private void OnFontSizeChanged(object? sender, NumericUpDownValueChangedEventArgs e)
+    {
+        try
+        {
+            var fontSize = (double)(e.NewValue ?? 12.0m);
+            
+            _logger.Information("Font size changed to: {FontSize}pt", fontSize);
+            _viewModel.FontSize = fontSize;
+
+            // Update TextRenderer in A4Canvas
+            UpdateCanvasFont();
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(ex, "Failed to handle font size change");
+        }
+    }
+
+    /// <summary>
+    /// Updates the font in A4Canvas TextRenderer
+    /// </summary>
+    private void UpdateCanvasFont()
+    {
+        try
+        {
+            var canvas = this.FindControl<Controls.A4Canvas>("A4Canvas");
+            if (canvas != null)
+            {
+                canvas.UpdateFont(_viewModel.FontFamily, _viewModel.FontSize, _viewModel.LineSpacing);
+                _logger.Debug("Updated canvas font: {FontFamily} {FontSize}pt {LineSpacing}", 
+                    _viewModel.FontFamily, _viewModel.FontSize, _viewModel.LineSpacing);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(ex, "Failed to update canvas font");
         }
     }
 

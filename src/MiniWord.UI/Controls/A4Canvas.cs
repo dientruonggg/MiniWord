@@ -203,6 +203,31 @@ public partial class A4Canvas : UserControl
     }
 
     /// <summary>
+    /// Updates the font settings for text rendering (P5.4)
+    /// </summary>
+    public void UpdateFont(string fontFamily, double fontSize, double lineSpacing)
+    {
+        _logger.Information("Updating font: {FontFamily} {FontSize}pt, line spacing: {LineSpacing}", 
+            fontFamily, fontSize, lineSpacing);
+
+        if (_textRenderer != null)
+        {
+            // Get Avalonia FontFamily from font name
+            var avaloniaFontFamily = new FontFamily(fontFamily);
+            _textRenderer.UpdateFont(avaloniaFontFamily, fontSize, lineSpacing);
+            
+            _logger.Debug("TextRenderer font updated successfully");
+            
+            // Force redraw with new font
+            InvalidateVisual();
+        }
+        else
+        {
+            _logger.Warning("TextRenderer is null, cannot update font");
+        }
+    }
+
+    /// <summary>
     /// Draws visual indicators for document margins
     /// </summary>
     private void DrawMarginIndicators()

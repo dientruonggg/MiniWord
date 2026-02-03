@@ -351,4 +351,77 @@ public class DocumentSerializerTests : IDisposable
         // Assert
         Assert.False(loadedDocument.IsDirty);
     }
+
+    [Fact]
+    public async Task SerializeAsync_WithFontProperties_PreservesFontSettings()
+    {
+        // Arrange - P5.4 test
+        var document = new A4Document(_logger)
+        {
+            Content = "Test content with custom fonts",
+            FontFamily = "Times New Roman",
+            FontSize = 14.0,
+            LineSpacing = 1.5
+        };
+        var filePath = GetTempFilePath();
+
+        // Act
+        await _serializer.SerializeAsync(document, filePath);
+        var restoredDocument = await _serializer.DeserializeAsync(filePath, _logger);
+
+        // Assert
+        Assert.Equal("Times New Roman", restoredDocument.FontFamily);
+        Assert.Equal(14.0, restoredDocument.FontSize);
+        Assert.Equal(1.5, restoredDocument.LineSpacing);
+    }
+
+    [Fact]
+    public async Task SerializeAsync_WithDefaultFontProperties_PreservesDefaults()
+    {
+        // Arrange - P5.4 test for default values
+        var document = new A4Document(_logger)
+        {
+            Content = "Test content with default fonts"
+        };
+        var filePath = GetTempFilePath();
+
+        // Act
+        await _serializer.SerializeAsync(document, filePath);
+        var restoredDocument = await _serializer.DeserializeAsync(filePath, _logger);
+
+        // Assert - default values should be preserved
+        Assert.Equal("Arial", restoredDocument.FontFamily);
+        Assert.Equal(12.0, restoredDocument.FontSize);
+        Assert.Equal(1.2, restoredDocument.LineSpacing);
+    }
+
+    [Fact]
+    public async Task RoundTrip_WithFormattingSpans_PreservesFormatting()
+    {
+        // Arrange - P5.3/P5.4 test for formatting spans
+        var document = new A4Document(_logger)
+        {
+            Content = "Bold text here"
+        };
+        
+        // Add formatting span
+        document.FormattingSpans.Add(new FormattingSpan
+        {
+            StartIndex = 0,
+            Length = 4,
+            Formatting = TextFormatting.Bold
+        });
+        
+        var filePath = GetTempFilePath();
+
+        // Act
+        await _serializer.SerializeAsync(document, filePath);
+        var restoredDocument = await _serializer.DeserializeAsync(filePath, _logger);
+
+        // Assert
+        Assert.Single(restoredDocument.FormattingSpans);
+        Assert.Equal(0, restoredDocument.FormattingSpans[0].StartIndex);
+        Assert.Equal(4, restoredDocument.FormattingSpans[0].Length);
+        Assert.Equal(TextFormatting.Bold, restoredDocument.FormattingSpans[0].Formatting);
+    }
 }

@@ -14,6 +14,9 @@ public class A4Document : INotifyPropertyChanged
     private string _content = string.Empty;
     private bool _isDirty = false;
     private int _currentPageIndex = 0;
+    private string _fontFamily = "Arial";
+    private double _fontSize = 12.0;
+    private double _lineSpacing = 1.2;
 
     /// <summary>
     /// A4 width in pixels at 96 DPI (210mm)
@@ -49,6 +52,60 @@ public class A4Document : INotifyPropertyChanged
     /// Document-level formatting spans (P5.3)
     /// </summary>
     public List<FormattingSpan> FormattingSpans { get; set; } = new List<FormattingSpan>();
+
+    /// <summary>
+    /// Font family for document text (P5.4)
+    /// </summary>
+    public string FontFamily
+    {
+        get => _fontFamily;
+        set
+        {
+            if (_fontFamily != value)
+            {
+                _fontFamily = value;
+                IsDirty = true;
+                OnPropertyChanged(nameof(FontFamily));
+                _logger.Debug("Font family changed to: {FontFamily}", _fontFamily);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Font size in points for document text (P5.4)
+    /// </summary>
+    public double FontSize
+    {
+        get => _fontSize;
+        set
+        {
+            if (Math.Abs(_fontSize - value) > 0.01)
+            {
+                _fontSize = value;
+                IsDirty = true;
+                OnPropertyChanged(nameof(FontSize));
+                _logger.Debug("Font size changed to: {FontSize}pt", _fontSize);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Line spacing multiplier for document text (P5.4)
+    /// </summary>
+    public double LineSpacing
+    {
+        get => _lineSpacing;
+        set
+        {
+            if (Math.Abs(_lineSpacing - value) > 0.01)
+            {
+                _lineSpacing = value;
+                IsDirty = true;
+                OnPropertyChanged(nameof(LineSpacing));
+                _logger.Debug("Line spacing changed to: {LineSpacing}", _lineSpacing);
+            }
+        }
+    }
 
     /// <summary>
     /// Document content
