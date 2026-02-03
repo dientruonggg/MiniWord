@@ -52,6 +52,25 @@ public partial class MainWindow : Window
             findReplaceMenuItem.Click += (s, e) => ShowFindReplaceDialog();
         }
 
+        // Wire up formatting buttons (P5.3)
+        var boldButton = this.FindControl<Button>("BoldButton");
+        if (boldButton != null)
+        {
+            boldButton.Click += (s, e) => ApplyBoldFormatting();
+        }
+
+        var italicButton = this.FindControl<Button>("ItalicButton");
+        if (italicButton != null)
+        {
+            italicButton.Click += (s, e) => ApplyItalicFormatting();
+        }
+
+        var underlineButton = this.FindControl<Button>("UnderlineButton");
+        if (underlineButton != null)
+        {
+            underlineButton.Click += (s, e) => ApplyUnderlineFormatting();
+        }
+
         // Wire up keyboard event handlers (view-specific behavior)
         this.KeyDown += MainWindow_KeyDown;
 
@@ -60,6 +79,14 @@ public partial class MainWindow : Window
 
         // Populate initial recent files menu (P4.3)
         PopulateRecentFilesMenu();
+
+        // Initialize document in A4Canvas (P5.3)
+        var canvas = this.FindControl<Controls.A4Canvas>("A4Canvas");
+        if (canvas != null)
+        {
+            canvas.SetDocument(_viewModel.Document);
+            _logger.Debug("Document initialized in A4Canvas");
+        }
 
         _logger.Information("MainWindow initialized successfully with MVVM pattern, validation support, file operations, and recent files tracking");
     }
@@ -207,6 +234,33 @@ public partial class MainWindow : Window
         {
             _logger.Information("Ctrl+F pressed - opening Find/Replace dialog");
             ShowFindReplaceDialog();
+            e.Handled = true;
+            return;
+        }
+
+        // Ctrl+B for bold formatting (P5.3)
+        if (e.KeyModifiers == Avalonia.Input.KeyModifiers.Control && e.Key == Avalonia.Input.Key.B)
+        {
+            _logger.Information("Ctrl+B pressed - toggling bold formatting");
+            ApplyBoldFormatting();
+            e.Handled = true;
+            return;
+        }
+
+        // Ctrl+I for italic formatting (P5.3)
+        if (e.KeyModifiers == Avalonia.Input.KeyModifiers.Control && e.Key == Avalonia.Input.Key.I)
+        {
+            _logger.Information("Ctrl+I pressed - toggling italic formatting");
+            ApplyItalicFormatting();
+            e.Handled = true;
+            return;
+        }
+
+        // Ctrl+U for underline formatting (P5.3)
+        if (e.KeyModifiers == Avalonia.Input.KeyModifiers.Control && e.Key == Avalonia.Input.Key.U)
+        {
+            _logger.Information("Ctrl+U pressed - toggling underline formatting");
+            ApplyUnderlineFormatting();
             e.Handled = true;
             return;
         }
@@ -609,6 +663,79 @@ public partial class MainWindow : Window
         catch (Exception ex)
         {
             _logger.Error(ex, "Failed to replace text");
+        }
+    }
+
+    #endregion
+
+    #region Text Formatting (P5.3)
+
+    /// <summary>
+    /// Applies or removes bold formatting to the selected text
+    /// </summary>
+    private void ApplyBoldFormatting()
+    {
+        try
+        {
+            var canvas = this.FindControl<Controls.A4Canvas>("A4Canvas");
+            if (canvas == null)
+            {
+                _logger.Warning("A4Canvas not found - cannot apply bold formatting");
+                return;
+            }
+
+            canvas.ToggleBold();
+            _logger.Information("Bold formatting toggled");
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(ex, "Failed to apply bold formatting");
+        }
+    }
+
+    /// <summary>
+    /// Applies or removes italic formatting to the selected text
+    /// </summary>
+    private void ApplyItalicFormatting()
+    {
+        try
+        {
+            var canvas = this.FindControl<Controls.A4Canvas>("A4Canvas");
+            if (canvas == null)
+            {
+                _logger.Warning("A4Canvas not found - cannot apply italic formatting");
+                return;
+            }
+
+            canvas.ToggleItalic();
+            _logger.Information("Italic formatting toggled");
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(ex, "Failed to apply italic formatting");
+        }
+    }
+
+    /// <summary>
+    /// Applies or removes underline formatting to the selected text
+    /// </summary>
+    private void ApplyUnderlineFormatting()
+    {
+        try
+        {
+            var canvas = this.FindControl<Controls.A4Canvas>("A4Canvas");
+            if (canvas == null)
+            {
+                _logger.Warning("A4Canvas not found - cannot apply underline formatting");
+                return;
+            }
+
+            canvas.ToggleUnderline();
+            _logger.Information("Underline formatting toggled");
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(ex, "Failed to apply underline formatting");
         }
     }
 

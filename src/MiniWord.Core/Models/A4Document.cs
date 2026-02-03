@@ -46,6 +46,11 @@ public class A4Document : INotifyPropertyChanged
     public List<Page> Pages { get; private set; } = new List<Page>();
 
     /// <summary>
+    /// Document-level formatting spans (P5.3)
+    /// </summary>
+    public List<FormattingSpan> FormattingSpans { get; set; } = new List<FormattingSpan>();
+
+    /// <summary>
     /// Document content
     /// </summary>
     public string Content 
