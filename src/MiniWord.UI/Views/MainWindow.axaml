@@ -121,6 +121,45 @@
                     </Button>
                 </StackPanel>
                 
+                <!-- Separator -->
+                <Rectangle Width="2" Fill="White" Opacity="0.3" Margin="10,0"/>
+                
+                <!-- Font Selection Controls (P5.4) -->
+                <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                    <TextBlock Text="Font:" Foreground="White" VerticalAlignment="Center"/>
+                    
+                    <ComboBox x:Name="FontFamilyComboBox"
+                              SelectedItem="{Binding FontFamily, Mode=TwoWay}"
+                              Width="150"
+                              Background="White"
+                              ToolTip.Tip="Select font family">
+                        <ComboBoxItem Content="Arial"/>
+                        <ComboBoxItem Content="Times New Roman"/>
+                        <ComboBoxItem Content="Courier New"/>
+                        <ComboBoxItem Content="Verdana"/>
+                        <ComboBoxItem Content="Georgia"/>
+                        <ComboBoxItem Content="Calibri"/>
+                        <ComboBoxItem Content="Segoe UI"/>
+                        <ComboBoxItem Content="Tahoma"/>
+                        <ComboBoxItem Content="Trebuchet MS"/>
+                        <ComboBoxItem Content="Comic Sans MS"/>
+                    </ComboBox>
+                    
+                    <TextBlock Text="Size:" Foreground="White" VerticalAlignment="Center" Margin="10,0,0,0"/>
+                    
+                    <NumericUpDown x:Name="FontSizeNumeric"
+                                   Value="{Binding FontSize, Mode=TwoWay}"
+                                   Minimum="8"
+                                   Maximum="72"
+                                   Increment="1"
+                                   FormatString="F0"
+                                   Width="70"
+                                   Background="White"
+                                   ToolTip.Tip="Font size (8-72 pt)"/>
+                    
+                    <TextBlock Text="pt" Foreground="White" VerticalAlignment="Center"/>
+                </StackPanel>
+                
             </StackPanel>
         </Border>
 

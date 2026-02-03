@@ -71,10 +71,28 @@ public class DocumentSerializer
                         Content = l.Content,
                         StartIndex = l.StartIndex,
                         Width = l.Width,
-                        IsHardBreak = l.IsHardBreak
+                        IsHardBreak = l.IsHardBreak,
+                        // P5.3: Serialize formatting spans
+                        FormattingSpans = l.FormattingSpans?.Select(fs => new FormattingSpanDto
+                        {
+                            StartIndex = fs.StartIndex,
+                            Length = fs.Length,
+                            Formatting = (int)fs.Formatting
+                        }).ToList()
                     }).ToList()
                 }).ToList(),
-                CurrentPageIndex = document.CurrentPageIndex
+                CurrentPageIndex = document.CurrentPageIndex,
+                // P5.4: Serialize font preferences
+                FontFamily = document.FontFamily,
+                FontSize = document.FontSize,
+                LineSpacing = document.LineSpacing,
+                // P5.3: Serialize document-level formatting spans
+                FormattingSpans = document.FormattingSpans?.Select(fs => new FormattingSpanDto
+                {
+                    StartIndex = fs.StartIndex,
+                    Length = fs.Length,
+                    Formatting = (int)fs.Formatting
+                }).ToList()
             };
 
             // Ensure directory exists
@@ -158,6 +176,22 @@ public class DocumentSerializer
                 Content = dto.Content ?? string.Empty
             };
 
+            // P5.4: Restore font preferences if present
+            if (!string.IsNullOrEmpty(dto.FontFamily))
+            {
+                document.FontFamily = dto.FontFamily;
+            }
+            
+            if (dto.FontSize.HasValue && dto.FontSize.Value > 0)
+            {
+                document.FontSize = dto.FontSize.Value;
+            }
+            
+            if (dto.LineSpacing.HasValue && dto.LineSpacing.Value > 0)
+            {
+                document.LineSpacing = dto.LineSpacing.Value;
+            }
+
             // Restore margins if present
             if (dto.Margins != null)
             {
@@ -190,7 +224,14 @@ public class DocumentSerializer
                             Content = l.Content ?? string.Empty,
                             StartIndex = l.StartIndex,
                             Width = l.Width,
-                            IsHardBreak = l.IsHardBreak
+                            IsHardBreak = l.IsHardBreak,
+                            // P5.3: Restore formatting spans
+                            FormattingSpans = l.FormattingSpans?.Select(fs => new FormattingSpan
+                            {
+                                StartIndex = fs.StartIndex,
+                                Length = fs.Length,
+                                Formatting = (TextFormatting)fs.Formatting
+                            }).ToList() ?? new List<FormattingSpan>()
                         }).ToList();
                     }
                     
@@ -202,6 +243,17 @@ public class DocumentSerializer
                 {
                     document.GoToPage(dto.CurrentPageIndex);
                 }
+            }
+
+            // P5.3: Restore document-level formatting spans if present
+            if (dto.FormattingSpans != null && dto.FormattingSpans.Count > 0)
+            {
+                document.FormattingSpans = dto.FormattingSpans.Select(fs => new FormattingSpan
+                {
+                    StartIndex = fs.StartIndex,
+                    Length = fs.Length,
+                    Formatting = (TextFormatting)fs.Formatting
+                }).ToList();
             }
 
             // Mark as saved (not dirty) since we just loaded it
@@ -254,6 +306,14 @@ public class DocumentSerializer
         public MarginsDto? Margins { get; set; }
         public List<PageDto> Pages { get; set; } = new();
         public int CurrentPageIndex { get; set; }
+        
+        // P5.4: Font preferences
+        public string? FontFamily { get; set; }
+        public double? FontSize { get; set; }
+        public double? LineSpacing { get; set; }
+        
+        // P5.3: Formatting spans (missing from initial implementation)
+        public List<FormattingSpanDto>? FormattingSpans { get; set; }
     }
 
     /// <summary>
@@ -286,6 +346,19 @@ public class DocumentSerializer
         public int StartIndex { get; set; }
         public double Width { get; set; }
         public bool IsHardBreak { get; set; }
+        
+        // P5.3: Formatting spans
+        public List<FormattingSpanDto>? FormattingSpans { get; set; }
+    }
+
+    /// <summary>
+    /// Data Transfer Object for FormattingSpan serialization (P5.3/P5.4)
+    /// </summary>
+    private class FormattingSpanDto
+    {
+        public int StartIndex { get; set; }
+        public int Length { get; set; }
+        public int Formatting { get; set; } // TextFormatting enum as int
     }
 
     #endregion

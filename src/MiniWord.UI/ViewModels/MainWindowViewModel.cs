@@ -50,6 +50,24 @@ public partial class MainWindowViewModel : ObservableObject, INotifyDataErrorInf
     private bool _isDirty;
 
     /// <summary>
+    /// Font family for document text (P5.4)
+    /// </summary>
+    [ObservableProperty]
+    private string _fontFamily = "Arial";
+
+    /// <summary>
+    /// Font size in points for document text (P5.4)
+    /// </summary>
+    [ObservableProperty]
+    private double _fontSize = 12.0;
+
+    /// <summary>
+    /// Line spacing multiplier for document text (P5.4)
+    /// </summary>
+    [ObservableProperty]
+    private double _lineSpacing = 1.2;
+
+    /// <summary>
     /// Observable collection of recent files for UI binding (P4.3)
     /// </summary>
     [ObservableProperty]
@@ -375,6 +393,24 @@ public partial class MainWindowViewModel : ObservableObject, INotifyDataErrorInf
         OnPropertyChanged(nameof(RightMarginMm));
     }
 
+    partial void OnFontFamilyChanged(string value)
+    {
+        _logger.Debug("Font family changed in ViewModel: {FontFamily}", value);
+        _document.FontFamily = value;
+    }
+
+    partial void OnFontSizeChanged(double value)
+    {
+        _logger.Debug("Font size changed in ViewModel: {FontSize}pt", value);
+        _document.FontSize = value;
+    }
+
+    partial void OnLineSpacingChanged(double value)
+    {
+        _logger.Debug("Line spacing changed in ViewModel: {LineSpacing}", value);
+        _document.LineSpacing = value;
+    }
+
     partial void OnCurrentFilePathChanged(string? value)
     {
         _logger.Debug("Current file path changed: {FilePath}", value ?? "(null)");
@@ -465,11 +501,23 @@ public partial class MainWindowViewModel : ObservableObject, INotifyDataErrorInf
             _document.Pages.Add(page);
         }
         _document.GoToPage(loadedDocument.CurrentPageIndex);
+        
+        // P5.4: Restore font properties
+        _document.FontFamily = loadedDocument.FontFamily;
+        _document.FontSize = loadedDocument.FontSize;
+        _document.LineSpacing = loadedDocument.LineSpacing;
+        
+        // P5.3: Restore formatting spans
+        _document.FormattingSpans = loadedDocument.FormattingSpans;
+        
         _document.MarkAsSaved();
 
         // Update ViewModel
         DocumentText = loadedDocument.Content;
         Margins = loadedDocument.Margins;
+        FontFamily = loadedDocument.FontFamily;
+        FontSize = loadedDocument.FontSize;
+        LineSpacing = loadedDocument.LineSpacing;
         CurrentFilePath = filePath;
         IsDirty = false;
         UpdateWordCount();
@@ -584,6 +632,11 @@ public partial class MainWindowViewModel : ObservableObject, INotifyDataErrorInf
             // Update document content from UI
             _document.Content = DocumentText;
             _document.UpdateMargins(Margins);
+            
+            // P5.4: Update font properties
+            _document.FontFamily = FontFamily;
+            _document.FontSize = FontSize;
+            _document.LineSpacing = LineSpacing;
 
             // Serialize document
             await _documentSerializer.SerializeAsync(_document, CurrentFilePath);
@@ -631,6 +684,11 @@ public partial class MainWindowViewModel : ObservableObject, INotifyDataErrorInf
             // Update document content from UI
             _document.Content = DocumentText;
             _document.UpdateMargins(Margins);
+            
+            // P5.4: Update font properties
+            _document.FontFamily = FontFamily;
+            _document.FontSize = FontSize;
+            _document.LineSpacing = LineSpacing;
 
             // Serialize document
             await _documentSerializer.SerializeAsync(_document, filePath);
